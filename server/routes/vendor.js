@@ -17,38 +17,36 @@ module.exports = function (app) {
   // this must carry an explicit path.
   router.use('/api/vendor', requireRole('vendor'));
 
-  function myProviders(req) {
-    return db.prepare('SELECT * FROM providers WHERE name = ?').all(req.session.user.company);
+  async function myProviders(req) {
+    return db.all('SELECT * FROM providers WHERE name = ?', [req.session.user.company]);
   }
 
-  function myProviderIds(req) {
-    return myProviders(req).map((r) => r.id);
-  }
-
-  router.get('/api/vendor/orders', (req, res) => {
-    const providers = myProviders(req);
+  router.get('/api/vendor/orders', async (req, res) => {
+    const providers = await myProviders(req);
     const providerIds = providers.map((p) => p.id);
     const orders = providerIds.length
-      ? db.prepare(
+      ? await db.all(
           `SELECT o.*, u.name AS client_name FROM orders o JOIN users u ON u.id = o.client_id
-           WHERE o.provider_id IN (${providerIds.map(() => '?').join(',')}) ORDER BY o.updated_at DESC`
-        ).all(...providerIds)
+           WHERE o.provider_id IN (${providerIds.map(() => '?').join(',')}) ORDER BY o.updated_at DESC`,
+          providerIds
+        )
       : [];
     res.json({ orders, providers, STATUS_LABELS, STATUS_PROGRESS, NEXT_STATUS });
   });
 
-  router.get('/api/vendor/orders/:id', (req, res) => {
-    const order = db.prepare(
-      `SELECT o.*, u.name AS client_name FROM orders o JOIN users u ON u.id = o.client_id WHERE o.id = ?`
-    ).get(req.params.id);
+  router.get('/api/vendor/orders/:id', async (req, res) => {
+    const order = await db.get(
+      `SELECT o.*, u.name AS client_name FROM orders o JOIN users u ON u.id = o.client_id WHERE o.id = ?`,
+      [req.params.id]
+    );
     if (!order) return res.status(404).json({ error: 'not_found', message: 'Order not found.' });
-    const timeline = db.prepare('SELECT * FROM order_timeline WHERE order_id = ? ORDER BY created_at ASC').all(order.id);
-    const payments = db.prepare('SELECT id, method, amount, status, mpesa_receipt, created_at FROM payments WHERE order_id = ? ORDER BY created_at DESC').all(order.id);
+    const timeline = await db.all('SELECT * FROM order_timeline WHERE order_id = ? ORDER BY created_at ASC', [order.id]);
+    const payments = await db.all('SELECT id, method, amount, status, mpesa_receipt, created_at FROM payments WHERE order_id = ? ORDER BY created_at DESC', [order.id]);
     const options = order.options_json ? JSON.parse(order.options_json) : [];
     const aiBrief = order.ai_brief_json ? JSON.parse(order.ai_brief_json) : null;
     res.json({
       order, timeline, payments, options, aiBrief,
-      category: resolveOrderCategory(order),
+      category: await resolveOrderCategory(order),
       STATUS_LABELS, STATUS_PROGRESS, NEXT_STATUS, DELIVERY_METHODS, EAC_COUNTRIES,
       jobCard: JOB_CARD_CHECKLISTS[order.status] || null,
     });
@@ -56,9 +54,10 @@ module.exports = function (app) {
 
   router.post('/api/vendor/orders/:id/advance', async (req, res) => {
     const { note } = req.body;
-    const order = db.prepare(
-      `SELECT o.*, u.phone AS client_phone FROM orders o JOIN users u ON u.id = o.client_id WHERE o.id = ?`
-    ).get(req.params.id);
+    const order = await db.get(
+      `SELECT o.*, u.phone AS client_phone FROM orders o JOIN users u ON u.id = o.client_id WHERE o.id = ?`,
+      [req.params.id]
+    );
     if (!order) return res.status(404).json({ error: 'not_found', message: 'Order not found.' });
     const next = NEXT_STATUS[order.status];
     if (next) {
@@ -74,16 +73,16 @@ module.exports = function (app) {
         : '';
       const fullNote = [checklistNote, note].filter(Boolean).join(' ') || `Moved to ${STATUS_LABELS[next]} by production partner.`;
 
-      db.prepare(`UPDATE orders SET status = ?, progress = ?, updated_at = datetime('now') WHERE id = ?`)
-        .run(next, STATUS_PROGRESS[next] ?? order.progress, order.id);
-      db.prepare('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)')
-        .run(order.id, STATUS_LABELS[next], fullNote);
+      await db.run(`UPDATE orders SET status = ?, progress = ?, updated_at = NOW() WHERE id = ?`,
+        [next, STATUS_PROGRESS[next] ?? order.progress, order.id]);
+      await db.run('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)',
+        [order.id, STATUS_LABELS[next], fullNote]);
       await whatsapp.sendStatusUpdate({
         to: order.client_phone,
         message: `TrioCraft Order #${order.id} (${order.title}) is now: ${STATUS_LABELS[next]}.${note ? ' Note: ' + note : ''}`,
       });
     }
-    const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
+    const updated = await db.get('SELECT * FROM orders WHERE id = ?', [order.id]);
     res.json({ order: updated });
   });
 

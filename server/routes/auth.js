@@ -16,9 +16,9 @@ module.exports = function (app) {
     res.json({ user: publicUser(req.session.user) });
   });
 
-  router.post('/api/auth/login', (req, res) => {
+  router.post('/api/auth/login', async (req, res) => {
     const { email, password, next: nextUrl } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get((email || '').toLowerCase().trim());
+    const user = await db.get('SELECT * FROM users WHERE email = ?', [(email || '').toLowerCase().trim()]);
     if (!user || !bcrypt.compareSync(password || '', user.password_hash)) {
       return res.status(401).json({ error: 'invalid_credentials', message: 'Invalid email or password.' });
     }
@@ -33,19 +33,20 @@ module.exports = function (app) {
     res.json({ user: req.session.user, redirectTo: dest });
   });
 
-  router.post('/api/auth/register', (req, res) => {
+  router.post('/api/auth/register', async (req, res) => {
     const { name, email, password, company, phone } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'missing_fields', message: 'Name, email, and password are required.' });
     }
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+    const existing = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase().trim()]);
     if (existing) {
       return res.status(409).json({ error: 'email_taken', message: 'An account with that email already exists.' });
     }
     const hash = bcrypt.hashSync(password, 10);
-    const info = db.prepare(
-      `INSERT INTO users (name, email, password_hash, role, company, phone) VALUES (?, ?, ?, 'client', ?, ?)`
-    ).run(name.trim(), email.toLowerCase().trim(), hash, company || null, phone || null);
+    const info = await db.run(
+      `INSERT INTO users (name, email, password_hash, role, company, phone) VALUES (?, ?, ?, 'client', ?, ?)`,
+      [name.trim(), email.toLowerCase().trim(), hash, company || null, phone || null]
+    );
     req.session.user = {
       id: info.lastInsertRowid, name, email, role: 'client', company, phone,
       accountType: 'retail', corporateVerified: false, creditTermsDays: null, kraPin: null,

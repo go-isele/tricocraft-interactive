@@ -21,44 +21,42 @@ const SUPPORTED_CURRENCIES = [
   { code: 'RWF', name: 'Rwandan Franc', symbol: 'FRw' },
 ];
 
-function listRates() {
-  const rows = db.prepare('SELECT * FROM fx_rates ORDER BY currency_code').all();
+async function listRates() {
+  const rows = await db.all('SELECT * FROM fx_rates ORDER BY currency_code');
   const byCode = {};
   rows.forEach((r) => { byCode[r.currency_code] = r; });
   return { rows, byCode };
 }
 
 /** How many KES one unit of `currencyCode` is worth. KES itself is always 1. */
-function getRate(currencyCode) {
+async function getRate(currencyCode) {
   if (currencyCode === 'KES') return 1;
-  const row = db.prepare('SELECT kes_per_unit FROM fx_rates WHERE currency_code = ?').get(currencyCode);
+  const row = await db.get('SELECT kes_per_unit FROM fx_rates WHERE currency_code = ?', [currencyCode]);
   return row ? row.kes_per_unit : null;
 }
 
 /** Converts a KES amount into `currencyCode`, rounded to a sensible display precision. */
-function convertFromKes(amountKes, currencyCode) {
+async function convertFromKes(amountKes, currencyCode) {
   if (!currencyCode || currencyCode === 'KES') return Math.round(amountKes);
-  const rate = getRate(currencyCode);
+  const rate = await getRate(currencyCode);
   if (!rate) return null; // unknown/unconfigured currency — caller should fall back to KES
   return Math.round(amountKes / rate);
 }
 
-function formatAmount(amountKes, currencyCode) {
+async function formatAmount(amountKes, currencyCode) {
   const code = currencyCode || 'KES';
   const meta = SUPPORTED_CURRENCIES.find((c) => c.code === code) || { symbol: code };
-  const converted = convertFromKes(amountKes, code);
+  const converted = await convertFromKes(amountKes, code);
   if (converted == null) return `KES ${Math.round(amountKes).toLocaleString()}`;
   return `${meta.symbol} ${converted.toLocaleString()}`;
 }
 
-function upsertRate(currencyCode, kesPerUnit) {
-  const existing = db.prepare('SELECT currency_code FROM fx_rates WHERE currency_code = ?').get(currencyCode);
+async function upsertRate(currencyCode, kesPerUnit) {
+  const existing = await db.get('SELECT currency_code FROM fx_rates WHERE currency_code = ?', [currencyCode]);
   if (existing) {
-    db.prepare(`UPDATE fx_rates SET kes_per_unit = ?, updated_at = datetime('now') WHERE currency_code = ?`)
-      .run(kesPerUnit, currencyCode);
+    await db.run(`UPDATE fx_rates SET kes_per_unit = ?, updated_at = NOW() WHERE currency_code = ?`, [kesPerUnit, currencyCode]);
   } else {
-    db.prepare(`INSERT INTO fx_rates (currency_code, kes_per_unit, updated_at) VALUES (?, ?, datetime('now'))`)
-      .run(currencyCode, kesPerUnit);
+    await db.run(`INSERT INTO fx_rates (currency_code, kes_per_unit, updated_at) VALUES (?, ?, NOW())`, [currencyCode, kesPerUnit]);
   }
 }
 

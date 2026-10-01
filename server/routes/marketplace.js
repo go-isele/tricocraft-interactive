@@ -120,23 +120,23 @@ module.exports = function (app) {
   });
 
   // ── Catalogue ──
-  router.get('/api/marketplace/products', (req, res) => {
-    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
+  router.get('/api/marketplace/products', async (req, res) => {
+    const categories = await db.all('SELECT * FROM categories ORDER BY sort_order');
     const activeCat = req.query.category || null;
     const products = activeCat
-      ? db.prepare(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p
-                    JOIN categories c ON c.id = p.category_id WHERE c.slug = ? AND p.active = 1 ORDER BY p.name`).all(activeCat)
-      : db.prepare(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p
-                    JOIN categories c ON c.id = p.category_id WHERE p.active = 1 ORDER BY c.sort_order, p.name`).all();
+      ? await db.all(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p
+                    JOIN categories c ON c.id = p.category_id WHERE c.slug = ? AND p.active = 1 ORDER BY p.name`, [activeCat])
+      : await db.all(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p
+                    JOIN categories c ON c.id = p.category_id WHERE p.active = 1 ORDER BY c.sort_order, p.name`);
     res.json({ categories, products, activeCat });
   });
 
-  router.get('/api/marketplace/products/:slug', (req, res) => {
-    const product = db.prepare(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p
-                                 JOIN categories c ON c.id = p.category_id WHERE p.slug = ?`).get(req.params.slug);
+  router.get('/api/marketplace/products/:slug', async (req, res) => {
+    const product = await db.get(`SELECT p.*, c.name AS category_name, c.slug AS category_slug FROM products p
+                                 JOIN categories c ON c.id = p.category_id WHERE p.slug = ?`, [req.params.slug]);
     if (!product) return res.status(404).json({ error: 'not_found', message: 'Product not found.' });
-    const providers = db.prepare('SELECT * FROM providers WHERE category_id = ?').all(product.category_id);
-    const pricing = getProductPricing(product.id);
+    const providers = await db.all('SELECT * FROM providers WHERE category_id = ?', [product.category_id]);
+    const pricing = await getProductPricing(product.id);
     res.json({ product, providers, pricing });
   });
 
@@ -144,13 +144,13 @@ module.exports = function (app) {
   // changes) without a full page reload — thin wrapper around the same
   // server-side computeOrderPricing() used at add-to-cart time, so tampering
   // with option IDs client-side can't change the price actually charged.
-  router.post('/api/marketplace/products/:slug/price', (req, res) => {
-    const product = db.prepare('SELECT id FROM products WHERE slug = ?').get(req.params.slug);
+  router.post('/api/marketplace/products/:slug/price', async (req, res) => {
+    const product = await db.get('SELECT id FROM products WHERE slug = ?', [req.params.slug]);
     if (!product) return res.status(404).json({ error: 'not_found' });
     const qty = Math.max(1, Number(req.body.quantity) || 1);
     const optionValueIds = Array.isArray(req.body.optionValueIds) ? req.body.optionValueIds.map(Number).filter(Boolean) : [];
     try {
-      const priced = computeOrderPricing(product.id, qty, optionValueIds);
+      const priced = await computeOrderPricing(product.id, qty, optionValueIds);
       res.json(priced);
     } catch (err) {
       res.status(400).json({ error: 'pricing_error', message: err.message });
@@ -158,60 +158,63 @@ module.exports = function (app) {
   });
 
   // ── Brand Vault ──
-  router.get('/api/marketplace/brand-vault', requireRole('client', 'admin'), (req, res) => {
-    const assets = db.prepare('SELECT * FROM brand_assets WHERE user_id = ? ORDER BY created_at DESC').all(req.session.user.id);
+  router.get('/api/marketplace/brand-vault', requireRole('client', 'admin'), async (req, res) => {
+    const assets = await db.all('SELECT * FROM brand_assets WHERE user_id = ? ORDER BY created_at DESC', [req.session.user.id]);
     res.json({ assets });
   });
 
-  router.post('/api/marketplace/brand-vault/upload', requireRole('client', 'admin'), upload.single('file'), (req, res) => {
+  router.post('/api/marketplace/brand-vault/upload', requireRole('client', 'admin'), upload.single('file'), async (req, res) => {
     const { asset_type, label } = req.body;
     if (!req.file) return res.status(400).json({ error: 'file_required' });
     const filePath = path.join(uploadDir, req.file.filename);
     const preflight = runPreflight(filePath, req.file.originalname);
-    const info = db.prepare(
+    const info = await db.run(
       `INSERT INTO brand_assets (user_id, asset_type, label, filename, verified, width_px, height_px, likely_color_space, preflight_notes)
-       VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)`
-    ).run(
-      req.session.user.id, asset_type || 'other', label || req.file.originalname, req.file.filename,
-      preflight.widthPx, preflight.heightPx, preflight.colorSpace, JSON.stringify(preflight.warnings)
+       VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+      [
+        req.session.user.id, asset_type || 'other', label || req.file.originalname, req.file.filename,
+        preflight.widthPx, preflight.heightPx, preflight.colorSpace, JSON.stringify(preflight.warnings),
+      ]
     );
-    const asset = db.prepare('SELECT * FROM brand_assets WHERE id = ?').get(info.lastInsertRowid);
+    const asset = await db.get('SELECT * FROM brand_assets WHERE id = ?', [info.lastInsertRowid]);
     res.status(201).json({ asset });
   });
 
-  router.post('/api/marketplace/brand-vault/color', requireRole('client', 'admin'), (req, res) => {
+  router.post('/api/marketplace/brand-vault/color', requireRole('client', 'admin'), async (req, res) => {
     const { label, hex } = req.body;
     if (!hex) return res.status(400).json({ error: 'hex_required' });
-    const info = db.prepare(
-      `INSERT INTO brand_assets (user_id, asset_type, label, value, verified) VALUES (?, 'color_palette', ?, ?, 1)`
-    ).run(req.session.user.id, label || 'Brand color', hex);
-    const asset = db.prepare('SELECT * FROM brand_assets WHERE id = ?').get(info.lastInsertRowid);
+    const info = await db.run(
+      `INSERT INTO brand_assets (user_id, asset_type, label, value, verified) VALUES (?, 'color_palette', ?, ?, 1)`,
+      [req.session.user.id, label || 'Brand color', hex]
+    );
+    const asset = await db.get('SELECT * FROM brand_assets WHERE id = ?', [info.lastInsertRowid]);
     res.status(201).json({ asset });
   });
 
-  router.delete('/api/marketplace/brand-vault/:id', requireRole('client', 'admin'), (req, res) => {
-    const asset = db.prepare('SELECT * FROM brand_assets WHERE id = ? AND user_id = ?').get(req.params.id, req.session.user.id);
+  router.delete('/api/marketplace/brand-vault/:id', requireRole('client', 'admin'), async (req, res) => {
+    const asset = await db.get('SELECT * FROM brand_assets WHERE id = ? AND user_id = ?', [req.params.id, req.session.user.id]);
     if (asset) {
       if (asset.filename) {
         const p = path.join(uploadDir, asset.filename);
         fs.existsSync(p) && fs.unlinkSync(p);
       }
-      db.prepare('DELETE FROM brand_assets WHERE id = ?').run(asset.id);
+      await db.run('DELETE FROM brand_assets WHERE id = ?', [asset.id]);
     }
     res.json({ ok: true });
   });
 
   // ── Cart (session-based; each item snapshots its computed price at add-time) ──
-  function getCartItems(req) {
+  async function getCartItems(req) {
     const cart = req.session.cart || [];
-    return cart.map((item) => {
-      const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.productId);
+    const items = await Promise.all(cart.map(async (item) => {
+      const product = await db.get('SELECT * FROM products WHERE id = ?', [item.productId]);
       return product ? { ...item, product } : null;
-    }).filter(Boolean);
+    }));
+    return items.filter(Boolean);
   }
 
-  router.get('/api/marketplace/cart', (req, res) => {
-    const items = getCartItems(req);
+  router.get('/api/marketplace/cart', async (req, res) => {
+    const items = await getCartItems(req);
     const total = items.reduce((sum, i) => sum + i.lineTotal, 0);
     const user = req.session.user;
     const canUseCredit = !!(user && user.accountType === 'corporate' && user.corporateVerified);
@@ -223,7 +226,7 @@ module.exports = function (app) {
     });
   });
 
-  router.post('/api/marketplace/cart/add', (req, res) => {
+  router.post('/api/marketplace/cart/add', async (req, res) => {
     const { productId, quantity, brief, mockup_data } = req.body;
     const pid = Number(productId);
     const qty = Math.max(1, Number(quantity) || 1);
@@ -231,7 +234,7 @@ module.exports = function (app) {
     // Pull the chosen value ID for each of this product's option groups —
     // client sends them as { optionValueIds: { [optionId]: valueId } } or as
     // opt_<optionId> form fields (kept for backward-compat with multipart posts).
-    const { options } = getProductPricing(pid);
+    const { options } = await getProductPricing(pid);
     const optMap = req.body.optionValueIds || {};
     const optionValueIds = options
       .map((opt) => Number(optMap[opt.id] ?? req.body['opt_' + opt.id]))
@@ -239,7 +242,7 @@ module.exports = function (app) {
 
     let priced;
     try {
-      priced = computeOrderPricing(pid, qty, optionValueIds);
+      priced = await computeOrderPricing(pid, qty, optionValueIds);
     } catch (err) {
       return res.status(400).json({ error: 'pricing_error', message: err.message });
     }
@@ -267,7 +270,7 @@ module.exports = function (app) {
   // A verified corporate account may instead check out on Net 30/60/90 terms
   // against an LPO — see readCreditFields().
   router.post('/api/marketplace/cart/checkout', uploadLpo.single('lpo_document'), async (req, res) => {
-    const items = getCartItems(req);
+    const items = await getCartItems(req);
     if (!items.length) return res.status(400).json({ error: 'empty_cart', message: 'Your cart is empty.' });
 
     if (!req.session.user) {
@@ -275,7 +278,7 @@ module.exports = function (app) {
       if (!guest_name || !guest_email) {
         return res.status(400).json({ error: 'guest_details_required', message: 'Please give us your name and email so we can send the quotation.' });
       }
-      const user = findOrCreateGuestClient({ name: guest_name, email: guest_email, company: guest_company, phone: guest_phone });
+      const user = await findOrCreateGuestClient({ name: guest_name, email: guest_email, company: guest_company, phone: guest_phone });
       req.session.user = sessionUserFromRow(user);
     }
 
@@ -283,27 +286,26 @@ module.exports = function (app) {
     const credit = readCreditFields(req.body, req.session.user);
     const displayCurrency = req.session.currency || 'KES';
 
-    const insertOrder = db.prepare(
-      `INSERT INTO orders (client_id, product_id, title, quantity, status, payment_status, progress, brief,
+    const insertOrderSql = `
+      INSERT INTO orders (client_id, product_id, title, quantity, status, payment_status, progress, brief,
                             calculated_unit_price, options_json, delivery_method, delivery_partner, delivery_town,
                             delivery_address, delivery_country, cross_border_cost_kes,
                             payment_terms, lpo_number, lpo_filename, currency, mockup_filename)
-       VALUES (?, ?, ?, ?, 'new', 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
+       VALUES (?, ?, ?, ?, 'new', 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const createdIds = [];
     for (const item of items) {
-      const info = insertOrder.run(
+      const info = await db.run(insertOrderSql, [
         req.session.user.id, item.product.id, item.product.name, item.quantity,
         STATUS_PROGRESS.new, item.brief || null,
         item.unitPrice, JSON.stringify(item.selections || []),
         delivery.delivery_method, delivery.delivery_partner, delivery.delivery_town, delivery.delivery_address,
         delivery.delivery_country, delivery.cross_border_cost_kes,
         credit.payment_terms, credit.lpo_number, req.file ? req.file.filename : null, displayCurrency,
-        item.mockupFilename || null
-      );
-      addTimeline(info.lastInsertRowid, 'Order Submitted', 'Received through the Production Marketplace.');
+        item.mockupFilename || null,
+      ]);
+      await addTimeline(info.lastInsertRowid, 'Order Submitted', 'Received through the Production Marketplace.');
       if (credit.payment_terms !== 'due_on_delivery') {
-        addTimeline(info.lastInsertRowid, 'LPO Received', `Checked out on ${credit.payment_terms.replace('net', 'Net ')} terms${credit.lpo_number ? ' · LPO No: ' + credit.lpo_number : ''}. Awaiting admin verification and invoicing.`);
+        await addTimeline(info.lastInsertRowid, 'LPO Received', `Checked out on ${credit.payment_terms.replace('net', 'Net ')} terms${credit.lpo_number ? ' · LPO No: ' + credit.lpo_number : ''}. Awaiting admin verification and invoicing.`);
       }
       createdIds.push(info.lastInsertRowid);
     }
@@ -332,8 +334,8 @@ module.exports = function (app) {
   });
 
   // ── Custom brief (no catalogue product) — open to guests ──
-  router.get('/api/marketplace/custom-brief/meta', (req, res) => {
-    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
+  router.get('/api/marketplace/custom-brief/meta', async (req, res) => {
+    const categories = await db.all('SELECT * FROM categories ORDER BY sort_order');
     const user = req.session.user;
     const canUseCredit = !!(user && user.accountType === 'corporate' && user.corporateVerified);
     res.json({
@@ -360,7 +362,7 @@ module.exports = function (app) {
       if (!guest_name || !guest_email) {
         return res.status(400).json({ error: 'guest_details_required', message: 'Please give us your name and email so our design team can reach you.' });
       }
-      const user = findOrCreateGuestClient({ name: guest_name, email: guest_email, company: guest_company, phone: guest_phone });
+      const user = await findOrCreateGuestClient({ name: guest_name, email: guest_email, company: guest_company, phone: guest_phone });
       req.session.user = sessionUserFromRow(user);
     }
 
@@ -370,22 +372,23 @@ module.exports = function (app) {
     // v6 — a Custom Brief order has no product_id (so no products.category_id
     // to derive a Service Category from for invoicing/job cards) — persist
     // whatever the client picked in the form's Category dropdown instead.
-    const briefCategory = category_ref ? db.prepare('SELECT id FROM categories WHERE slug = ?').get(category_ref) : null;
+    const briefCategory = category_ref ? await db.get('SELECT id FROM categories WHERE slug = ?', [category_ref]) : null;
 
-    const info = db.prepare(
+    const info = await db.run(
       `INSERT INTO orders (client_id, product_id, title, quantity, status, payment_status, progress, brief, deadline,
                             delivery_method, delivery_partner, delivery_town, delivery_address, delivery_country, cross_border_cost_kes,
                             payment_terms, lpo_number, lpo_filename, currency, ai_brief_json, category_id)
-       VALUES (?, NULL, ?, ?, 'new', 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      req.session.user.id, title, Math.max(1, Number(quantity) || 1), STATUS_PROGRESS.new, brief || null, deadline || null,
-      delivery.delivery_method, delivery.delivery_partner, delivery.delivery_town, delivery.delivery_address,
-      delivery.delivery_country, delivery.cross_border_cost_kes,
-      credit.payment_terms, credit.lpo_number, req.file ? req.file.filename : null, displayCurrency,
-      ai_brief_json || null, briefCategory ? briefCategory.id : null
+       VALUES (?, NULL, ?, ?, 'new', 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.session.user.id, title, Math.max(1, Number(quantity) || 1), STATUS_PROGRESS.new, brief || null, deadline || null,
+        delivery.delivery_method, delivery.delivery_partner, delivery.delivery_town, delivery.delivery_address,
+        delivery.delivery_country, delivery.cross_border_cost_kes,
+        credit.payment_terms, credit.lpo_number, req.file ? req.file.filename : null, displayCurrency,
+        ai_brief_json || null, briefCategory ? briefCategory.id : null,
+      ]
     );
-    addTimeline(info.lastInsertRowid, 'Custom Brief Submitted', 'Awaiting design team review and quotation.');
-    if (ai_brief_json) addTimeline(info.lastInsertRowid, 'AI-Assisted Brief', 'Client used AI Assist to structure this brief — see the AI-Structured Brief panel.');
+    await addTimeline(info.lastInsertRowid, 'Custom Brief Submitted', 'Awaiting design team review and quotation.');
+    if (ai_brief_json) await addTimeline(info.lastInsertRowid, 'AI-Assisted Brief', 'Client used AI Assist to structure this brief — see the AI-Structured Brief panel.');
 
     await notify({
       subject: `New Custom Brief — ${title}`,
@@ -397,47 +400,49 @@ module.exports = function (app) {
   });
 
   // ── Orders (client view) ──
-  router.get('/api/marketplace/orders', requireRole('client', 'admin'), (req, res) => {
-    const orders = db.prepare(
+  router.get('/api/marketplace/orders', requireRole('client', 'admin'), async (req, res) => {
+    const orders = await db.all(
       `SELECT o.*, p.name AS provider_name FROM orders o LEFT JOIN providers p ON p.id = o.provider_id
-       WHERE o.client_id = ? ORDER BY o.created_at DESC`
-    ).all(req.session.user.id);
+       WHERE o.client_id = ? ORDER BY o.created_at DESC`,
+      [req.session.user.id]
+    );
     const active = orders.filter((o) => !['completed', 'cancelled'].includes(o.status));
     const history = orders.filter((o) => ['completed', 'cancelled'].includes(o.status));
     res.json({ active, history, STATUS_LABELS });
   });
 
-  router.get('/api/marketplace/orders/:id', requireRole('client', 'admin', 'vendor'), (req, res) => {
-    const order = db.prepare(
+  router.get('/api/marketplace/orders/:id', requireRole('client', 'admin', 'vendor'), async (req, res) => {
+    const order = await db.get(
       `SELECT o.*, p.name AS provider_name, pr.name AS product_name FROM orders o
        LEFT JOIN providers p ON p.id = o.provider_id LEFT JOIN products pr ON pr.id = o.product_id
-       WHERE o.id = ?`
-    ).get(req.params.id);
+       WHERE o.id = ?`,
+      [req.params.id]
+    );
     if (!order) return res.status(404).json({ error: 'not_found', message: 'Order not found.' });
     if (req.session.user.role === 'client' && order.client_id !== req.session.user.id) {
       return res.status(403).json({ error: 'forbidden', message: 'This order belongs to another client.' });
     }
-    const timeline = db.prepare('SELECT * FROM order_timeline WHERE order_id = ? ORDER BY created_at ASC').all(order.id);
-    const payments = db.prepare('SELECT * FROM payments WHERE order_id = ? ORDER BY created_at DESC').all(order.id);
+    const timeline = await db.all('SELECT * FROM order_timeline WHERE order_id = ? ORDER BY created_at ASC', [order.id]);
+    const payments = await db.all('SELECT * FROM payments WHERE order_id = ? ORDER BY created_at DESC', [order.id]);
     const options = order.options_json ? JSON.parse(order.options_json) : [];
     const aiBrief = order.ai_brief_json ? JSON.parse(order.ai_brief_json) : null;
     const waLink = whatsapp.buildDeepLink(whatsapp.orderMessage(order));
     res.json({
       order, timeline, payments, options, aiBrief,
-      category: resolveOrderCategory(order),
+      category: await resolveOrderCategory(order),
       STATUS_LABELS, DELIVERY_METHODS, eacCountries: crossBorder.EAC_COUNTRIES, waLink,
     });
   });
 
   // Proforma (pre-invoicing) or tax invoice (once formally invoiced) as a
   // real downloadable PDF — see lib/invoice-pdf.js.
-  router.get('/api/marketplace/orders/:id/invoice.pdf', requireRole('client', 'admin', 'vendor'), (req, res) => {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  router.get('/api/marketplace/orders/:id/invoice.pdf', requireRole('client', 'admin', 'vendor'), async (req, res) => {
+    const order = await db.get('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'not_found', message: 'Order not found.' });
     if (req.session.user.role === 'client' && order.client_id !== req.session.user.id) {
       return res.status(403).json({ error: 'forbidden', message: 'This order belongs to another client.' });
     }
-    const client = db.prepare('SELECT * FROM users WHERE id = ?').get(order.client_id);
+    const client = await db.get('SELECT * FROM users WHERE id = ?', [order.client_id]);
     const kind = order.invoice_status === 'not_invoiced' ? 'proforma' : 'tax_invoice';
     const fiscal = {
       invoiceNumber: order.etims_invoice_number,
@@ -445,7 +450,7 @@ module.exports = function (app) {
       simulated: !!order.etims_simulated,
       qrDataUrl: order.etims_qr_data_url,
     };
-    const category = resolveOrderCategory(order);
+    const category = await resolveOrderCategory(order);
     generateInvoicePdf({ order, client, kind, fiscal, category })
       .then((buffer) => {
         res.set('Content-Type', 'application/pdf');

@@ -11,7 +11,7 @@ module.exports = function (app) {
 
   // ── Client-initiated: prompt an STK push for one order's outstanding balance (Kenya / KES) ──
   router.post('/api/marketplace/orders/:id/pay-mpesa', requireRole('client', 'admin', 'vendor'), async (req, res) => {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    const order = await db.get('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'not_found', message: 'Order not found.' });
     if (req.session.user.role === 'client' && order.client_id !== req.session.user.id) {
       return res.status(403).json({ error: 'forbidden', message: 'This order belongs to another client.' });
@@ -32,22 +32,23 @@ module.exports = function (app) {
       description: `TrioCraft Order #${order.id}`,
     });
 
-    db.prepare(
+    await db.run(
       `INSERT INTO payments (order_id, method, phone, amount, currency, provider_ref, merchant_request_id, status, result_desc)
-       VALUES (?, 'mpesa', ?, ?, 'KES', ?, ?, ?, ?)`
-    ).run(
-      order.id, phone, amount,
-      result.checkoutRequestId || null, result.merchantRequestId || null,
-      result.success ? 'pending' : 'failed',
-      result.simulated ? 'Simulated push (Daraja not configured)' : (result.reason || null)
+       VALUES (?, 'mpesa', ?, ?, 'KES', ?, ?, ?, ?)`,
+      [
+        order.id, phone, amount,
+        result.checkoutRequestId || null, result.merchantRequestId || null,
+        result.success ? 'pending' : 'failed',
+        result.simulated ? 'Simulated push (Daraja not configured)' : (result.reason || null),
+      ]
     );
 
-    db.prepare('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)').run(
+    await db.run('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)', [
       order.id, 'M-Pesa Payment Requested',
       result.success
         ? `STK push sent to ${phone} for KES ${amount.toLocaleString()}${result.simulated ? ' (simulated — Daraja not configured)' : ''}.`
-        : `STK push failed: ${result.reason}`
-    );
+        : `STK push failed: ${result.reason}`,
+    ]);
 
     res.json({ success: result.success, simulated: !!result.simulated, reason: result.reason || null });
   });
@@ -56,7 +57,7 @@ module.exports = function (app) {
   // Charged in the order's display currency; see lib/regional-momo.js for the
   // graceful-degradation contract (simulates without real API credentials).
   router.post('/api/marketplace/orders/:id/pay-regional', requireRole('client', 'admin', 'vendor'), async (req, res) => {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    const order = await db.get('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'not_found', message: 'Order not found.' });
     if (req.session.user.role === 'client' && order.client_id !== req.session.user.id) {
       return res.status(403).json({ error: 'forbidden', message: 'This order belongs to another client.' });
@@ -71,7 +72,7 @@ module.exports = function (app) {
     const airtelCountry = country === 'RW' ? 'RW' : 'TZ';
     const defaultCurrency = provider === 'airtel_money' ? (airtelCountry === 'RW' ? 'RWF' : 'TZS') : 'UGX';
     const targetCurrency = order.currency !== 'KES' ? order.currency : defaultCurrency;
-    const amount = currency.convertFromKes(amountKes, targetCurrency) || amountKes;
+    const amount = (await currency.convertFromKes(amountKes, targetCurrency)) || amountKes;
 
     if (!phone || amount <= 0) {
       return res.status(400).json({ error: 'invalid_request', message: 'A phone number and a positive order amount are required.' });
@@ -82,22 +83,23 @@ module.exports = function (app) {
       ? await initiateAirtelMoney({ phone, amount, currency: targetCurrency, reference, country: airtelCountry })
       : await initiateMtnMomo({ phone, amount, currency: targetCurrency, reference, description: `TrioCraft Order #${order.id}` });
 
-    db.prepare(
+    await db.run(
       `INSERT INTO payments (order_id, method, phone, amount, currency, provider_ref, status, result_desc)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      order.id, provider === 'airtel_money' ? 'airtel_money' : 'momo', phone, amount, targetCurrency,
-      result.referenceId || result.transactionId || null,
-      result.success ? 'pending' : 'failed',
-      result.simulated ? 'Simulated push (regional provider not configured)' : (result.reason || null)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        order.id, provider === 'airtel_money' ? 'airtel_money' : 'momo', phone, amount, targetCurrency,
+        result.referenceId || result.transactionId || null,
+        result.success ? 'pending' : 'failed',
+        result.simulated ? 'Simulated push (regional provider not configured)' : (result.reason || null),
+      ]
     );
 
-    db.prepare('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)').run(
+    await db.run('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)', [
       order.id, 'Regional Payment Requested',
       result.success
         ? `${provider === 'airtel_money' ? 'Airtel Money' : 'MTN MoMo'} request sent to ${phone} for ${targetCurrency} ${amount.toLocaleString()}${result.simulated ? ' (simulated)' : ''}.`
-        : `Regional payment request failed: ${result.reason}`
-    );
+        : `Regional payment request failed: ${result.reason}`,
+    ]);
 
     res.json({ success: result.success, simulated: !!result.simulated, reason: result.reason || null });
   });
@@ -109,7 +111,7 @@ module.exports = function (app) {
       if (!stkCallback) return res.status(400).json({ received: false });
 
       const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = stkCallback;
-      const payment = db.prepare('SELECT * FROM payments WHERE provider_ref = ?').get(CheckoutRequestID);
+      const payment = await db.get('SELECT * FROM payments WHERE provider_ref = ?', [CheckoutRequestID]);
       if (!payment) return res.status(200).json({ received: true, note: 'No matching payment record' });
 
       const items = CallbackMetadata?.Item || [];
@@ -117,18 +119,20 @@ module.exports = function (app) {
       const mpesaReceipt = get('MpesaReceiptNumber') || null;
       const success = Number(ResultCode) === 0;
 
-      db.prepare(
-        `UPDATE payments SET status = ?, result_desc = ?, mpesa_receipt = ?, raw_callback = ?, updated_at = datetime('now') WHERE id = ?`
-      ).run(success ? 'completed' : 'failed', ResultDesc, mpesaReceipt, JSON.stringify(req.body), payment.id);
+      await db.run(
+        `UPDATE payments SET status = ?, result_desc = ?, mpesa_receipt = ?, raw_callback = ?, updated_at = NOW() WHERE id = ?`,
+        [success ? 'completed' : 'failed', ResultDesc, mpesaReceipt, JSON.stringify(req.body), payment.id]
+      );
 
       if (success) {
-        db.prepare(`UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ?`).run(payment.order_id);
-        db.prepare('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)').run(
-          payment.order_id, 'Payment Confirmed', `M-Pesa receipt ${mpesaReceipt || '—'} for KES ${payment.amount.toLocaleString()}.`
+        await db.run(`UPDATE orders SET payment_status = 'paid', updated_at = NOW() WHERE id = ?`, [payment.order_id]);
+        await db.run('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)', [
+          payment.order_id, 'Payment Confirmed', `M-Pesa receipt ${mpesaReceipt || '—'} for KES ${payment.amount.toLocaleString()}.`,
+        ]);
+        const order = await db.get(
+          `SELECT o.id, o.title, u.phone AS client_phone FROM orders o JOIN users u ON u.id = o.client_id WHERE o.id = ?`,
+          [payment.order_id]
         );
-        const order = db.prepare(
-          `SELECT o.id, o.title, u.phone AS client_phone FROM orders o JOIN users u ON u.id = o.client_id WHERE o.id = ?`
-        ).get(payment.order_id);
         if (order) {
           await whatsapp.sendStatusUpdate({
             to: order.client_phone,
@@ -136,9 +140,9 @@ module.exports = function (app) {
           });
         }
       } else {
-        db.prepare('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)').run(
-          payment.order_id, 'Payment Failed', ResultDesc || 'M-Pesa payment was not completed.'
-        );
+        await db.run('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)', [
+          payment.order_id, 'Payment Failed', ResultDesc || 'M-Pesa payment was not completed.',
+        ]);
       }
 
       res.status(200).json({ received: true });
@@ -149,13 +153,13 @@ module.exports = function (app) {
   });
 
   // ── Lightweight polling endpoint the order page can use to check status ──
-  router.get('/api/marketplace/orders/:id/payments', requireRole('client', 'admin', 'vendor'), (req, res) => {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  router.get('/api/marketplace/orders/:id/payments', requireRole('client', 'admin', 'vendor'), async (req, res) => {
+    const order = await db.get('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'not_found' });
     if (req.session.user.role === 'client' && order.client_id !== req.session.user.id) {
       return res.status(403).json({ error: 'forbidden' });
     }
-    const payments = db.prepare('SELECT id, method, phone, amount, currency, status, mpesa_receipt, created_at FROM payments WHERE order_id = ? ORDER BY created_at DESC').all(order.id);
+    const payments = await db.all('SELECT id, method, phone, amount, currency, status, mpesa_receipt, created_at FROM payments WHERE order_id = ? ORDER BY created_at DESC', [order.id]);
     res.json({ payments });
   });
 

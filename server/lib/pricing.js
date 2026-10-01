@@ -6,19 +6,23 @@
 const db = require('../db/db');
 
 /** All configurable options + volume tiers for a product, in display order. */
-function getProductPricing(productId) {
-  const options = db.prepare(
-    'SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order, id'
-  ).all(productId).map((opt) => ({
+async function getProductPricing(productId) {
+  const rawOptions = await db.all(
+    'SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order, id',
+    [productId]
+  );
+  const options = await Promise.all(rawOptions.map(async (opt) => ({
     ...opt,
-    values: db.prepare(
-      'SELECT * FROM product_option_values WHERE option_id = ? ORDER BY sort_order, id'
-    ).all(opt.id),
-  }));
+    values: await db.all(
+      'SELECT * FROM product_option_values WHERE option_id = ? ORDER BY sort_order, id',
+      [opt.id]
+    ),
+  })));
 
-  const tiers = db.prepare(
-    'SELECT * FROM product_quantity_tiers WHERE product_id = ? ORDER BY min_qty'
-  ).all(productId);
+  const tiers = await db.all(
+    'SELECT * FROM product_quantity_tiers WHERE product_id = ? ORDER BY min_qty',
+    [productId]
+  );
 
   return { options, tiers };
 }
@@ -39,13 +43,13 @@ function tierUnitPrice(tiers, basePrice, quantity) {
  * @param {number} productId
  * @param {number} quantity
  * @param {number[]} optionValueIds - one chosen value ID per option group (missing groups fall back to their default value)
- * @returns {{ unitPrice: number, lineTotal: number, selections: Array<{optionName:string, valueLabel:string, priceDelta:number}>, tierApplied: boolean }}
+ * @returns {Promise<{ unitPrice: number, lineTotal: number, selections: Array<{optionName:string, valueLabel:string, priceDelta:number}>, tierApplied: boolean }>}
  */
-function computeOrderPricing(productId, quantity, optionValueIds = []) {
-  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+async function computeOrderPricing(productId, quantity, optionValueIds = []) {
+  const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
   if (!product) throw new Error('Unknown product');
 
-  const { options, tiers } = getProductPricing(productId);
+  const { options, tiers } = await getProductPricing(productId);
   const qty = Math.max(1, Number(quantity) || 1);
   const wantedIds = new Set((optionValueIds || []).map(Number));
 

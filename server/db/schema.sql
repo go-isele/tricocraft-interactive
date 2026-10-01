@@ -1,25 +1,41 @@
--- TrioCraft Production Marketplace — database schema (SQLite)
+-- TrioCraft Production Marketplace — database schema (PostgreSQL)
+--
+-- v10: migrated from SQLite (better-sqlite3) to PostgreSQL. Why: the old
+-- engine wasn't actually unstable, but better-sqlite3 is a NATIVE module —
+-- it needs a prebuilt binary matching the exact Node version, and a very
+-- new/non-LTS Node release (e.g. 24.x before prebuilds catch up) breaks it
+-- with "Could not locate the bindings file". The `pg` driver used here is
+-- pure JavaScript — no native binary, ever — and Postgres also gives proper
+-- concurrent-write handling if the API ever runs on more than one server.
+-- Translation notes from the old SQLite schema:
+--   INTEGER PRIMARY KEY AUTOINCREMENT  -> SERIAL PRIMARY KEY
+--   TEXT ... DEFAULT (datetime('now'))  -> TIMESTAMPTZ ... DEFAULT NOW()
+--     (every created_at/updated_at/published_at column — the app already
+--     reads these with `new Date(...)` everywhere, which parses the
+--     ISO-via-JSON value pg/Node produce exactly as it parsed the old
+--     SQLite string, so no frontend changes were needed)
+--   plain date-string fields (orders.deadline, orders.invoice_due_date) —
+--     left as TEXT, unchanged: they're opaque 'YYYY-MM-DD' strings from
+--     form input / addDays(), never a datetime('now') default
+--   boolean-ish flag columns (vetted, pantone_matched, verified, active,
+--     is_default, corporate_verified, etims_simulated) — left as INTEGER
+--     0/1, unchanged: the app reads/writes them as 0/1 everywhere, and
+--     Postgres INTEGER supports that identically to SQLite
+--   CHECK constraints, FOREIGN KEY references, UNIQUE — all supported
+--     as-is in Postgres, no syntax changes needed
 --
 -- v6: 11-division service taxonomy (categories.service_code, the capability
 -- statement's A–K letters) and orders.category_id for tagging product-less
--- Custom Brief orders with a Service Category on invoices/job cards. Both
--- are additive, non-CHECK-constrained columns — safe to add without wiping
--- an existing v5 database (see db/seed.js's category migration helper).
+-- Custom Brief orders with a Service Category on invoices/job cards.
 --
 -- v4: enterprise B2B credit/LPO workflow (account types, LPO/invoice fields,
 -- KRA e-TIMS fiscal-invoice tracking), EAC multi-currency display (fx_rates)
 -- and cross-border delivery, and AI-structured custom briefs. Layered on
 -- v3's print-specific pricing engine, pre-press checks, real print-shop
 -- order lifecycle, and M-Pesa payments.
---
--- NOTE: this version's `orders.status` CHECK constraint is a superset of but
--- NOT string-compatible with the v2 status values ('deposit_paid','design',
--- 'production','delivery' no longer exist as-is). SQLite can't alter a CHECK
--- constraint in place, so on an existing install: back up, delete
--- db/*.sqlite, then `npm run seed` again against this fresh schema.
 
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
@@ -32,11 +48,11 @@ CREATE TABLE IF NOT EXISTS users (
   credit_terms_days INTEGER, -- 30/60/90 — set by admin once verified; NULL = not yet extended credit
   kra_pin TEXT, -- for e-TIMS / tax invoice display
   preferred_currency TEXT DEFAULT 'KES', -- display-only, see lib/currency.js
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   icon TEXT,
@@ -48,7 +64,7 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 CREATE TABLE IF NOT EXISTS providers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   category_id INTEGER REFERENCES categories(id),
   vetted INTEGER DEFAULT 1,
@@ -61,7 +77,7 @@ CREATE TABLE IF NOT EXISTS providers (
 );
 
 CREATE TABLE IF NOT EXISTS products (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   category_id INTEGER REFERENCES categories(id),
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
@@ -81,14 +97,14 @@ CREATE TABLE IF NOT EXISTS products (
 -- of selected option values). See lib/pricing.js.
 
 CREATE TABLE IF NOT EXISTS product_options (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id),
   name TEXT NOT NULL,
   sort_order INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS product_option_values (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   option_id INTEGER NOT NULL REFERENCES product_options(id),
   label TEXT NOT NULL,
   price_delta INTEGER NOT NULL DEFAULT 0,
@@ -97,7 +113,7 @@ CREATE TABLE IF NOT EXISTS product_option_values (
 );
 
 CREATE TABLE IF NOT EXISTS product_quantity_tiers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id),
   min_qty INTEGER NOT NULL,
   max_qty INTEGER, -- NULL = open-ended ("500+")
@@ -105,7 +121,7 @@ CREATE TABLE IF NOT EXISTS product_quantity_tiers (
 );
 
 CREATE TABLE IF NOT EXISTS brand_assets (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id),
   asset_type TEXT NOT NULL CHECK(asset_type IN ('logo','color_palette','font','guideline','other')),
   label TEXT,
@@ -117,11 +133,11 @@ CREATE TABLE IF NOT EXISTS brand_assets (
   height_px INTEGER,
   likely_color_space TEXT, -- 'RGB' | 'CMYK' | 'Vector/PDF' | 'Unknown'
   preflight_notes TEXT, -- JSON array of warning strings
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   client_id INTEGER NOT NULL REFERENCES users(id),
   product_id INTEGER REFERENCES products(id),
   provider_id INTEGER REFERENCES providers(id),
@@ -166,21 +182,21 @@ CREATE TABLE IF NOT EXISTS orders (
   -- ── Multi-currency display + AI-structured brief ──
   currency TEXT NOT NULL DEFAULT 'KES', -- the currency the client was viewing prices in at order time (display only — KES is authoritative)
   ai_brief_json TEXT, -- structured output from lib/ai-brief.js, if the client used "AI Assist" on the Custom Brief form
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS order_timeline (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   order_id INTEGER NOT NULL REFERENCES orders(id),
   stage TEXT NOT NULL,
   notes TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── Payments (M-Pesa Daraja STK Push, MTN MoMo, Airtel Money) ─────────
 CREATE TABLE IF NOT EXISTS payments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   order_id INTEGER NOT NULL REFERENCES orders(id),
   method TEXT NOT NULL DEFAULT 'mpesa' CHECK(method IN ('mpesa','momo','airtel_money','cash','bank','other')),
   phone TEXT,
@@ -192,8 +208,8 @@ CREATE TABLE IF NOT EXISTS payments (
   result_desc TEXT,
   mpesa_receipt TEXT,
   raw_callback TEXT, -- JSON dump of the provider callback for troubleshooting
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── FX rates for multi-currency display (see lib/currency.js) ────────
@@ -203,11 +219,11 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE TABLE IF NOT EXISTS fx_rates (
   currency_code TEXT PRIMARY KEY,
   kes_per_unit REAL NOT NULL,
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS blog_posts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   slug TEXT NOT NULL UNIQUE,
   title TEXT NOT NULL,
   eyebrow TEXT DEFAULT 'Resources',
@@ -215,14 +231,14 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   body_html TEXT NOT NULL,
   meta_description TEXT,
   read_minutes INTEGER DEFAULT 5,
-  published_at TEXT NOT NULL DEFAULT (datetime('now'))
+  published_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS contact_messages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL,
   company TEXT,
   message TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

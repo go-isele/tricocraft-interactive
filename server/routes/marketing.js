@@ -146,10 +146,10 @@ const GRAPHIC_DESIGN_PAGE = {
 module.exports = function (app) {
   const router = express.Router();
 
-  router.get('/api/home', (req, res) => {
-    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
-    const posts = db.prepare('SELECT * FROM blog_posts ORDER BY published_at DESC LIMIT 3').all();
-    const providerCount = db.prepare('SELECT COUNT(*) AS n FROM providers').get().n;
+  router.get('/api/home', async (req, res) => {
+    const categories = await db.all('SELECT * FROM categories ORDER BY sort_order');
+    const posts = await db.all('SELECT * FROM blog_posts ORDER BY published_at DESC LIMIT 3');
+    const providerCount = (await db.get('SELECT COUNT(*) AS n FROM providers')).n;
     res.json({
       categories, posts, providerCount,
       featuredProjects: getFeaturedProjects(4),
@@ -161,23 +161,23 @@ module.exports = function (app) {
     res.json({ projects: PROJECTS, projectCategories: PROJECT_CATEGORIES });
   });
 
-  router.get('/api/services', (req, res) => {
+  router.get('/api/services', async (req, res) => {
     // v6 — the Capability Statement: all 11 divisions (A–K) as expandable
     // cards, each carrying its production specs, plus the surrounding
     // company-overview / differentiators / methodology / quality /
     // value-proposition sections from TrioCraft's formal capability statement.
-    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all()
-      .map((c) => ({ ...c, specs: CAPABILITY_SPECS[c.slug] || null }));
+    const rawCategories = await db.all('SELECT * FROM categories ORDER BY sort_order');
+    const categories = rawCategories.map((c) => ({ ...c, specs: CAPABILITY_SPECS[c.slug] || null }));
     res.json({ categories, DIFFERENTIATORS, METHODOLOGY_STEPS, QUALITY_POINTS, VALUE_PROPS });
   });
 
   // v7 — the fully-developed Graphic Design & Creative division page. Sits
   // alongside (not instead of) /services and the marketplace category filter.
-  router.get('/api/services/graphic-design-creative', (req, res) => {
-    const category = db.prepare('SELECT * FROM categories WHERE slug = ?').get('graphic-design-creative');
+  router.get('/api/services/graphic-design-creative', async (req, res) => {
+    const category = await db.get('SELECT * FROM categories WHERE slug = ?', ['graphic-design-creative']);
     const slugs = GRAPHIC_DESIGN_PAGE.subServices.map((s) => s.productSlug).filter(Boolean);
     const products = slugs.length
-      ? db.prepare(`SELECT * FROM products WHERE slug IN (${slugs.map(() => '?').join(',')}) AND active = 1`).all(...slugs)
+      ? await db.all(`SELECT * FROM products WHERE slug IN (${slugs.map(() => '?').join(',')}) AND active = 1`, slugs)
       : [];
     const productsBySlug = Object.fromEntries(products.map((p) => [p.slug, p]));
     const caseStudy = PROJECTS.find((p) => p.slug === 'finovation-office-rebrand') || null;
@@ -189,8 +189,8 @@ module.exports = function (app) {
     if (!name || !email || !message) {
       return res.status(400).json({ error: 'missing_fields', message: 'Please fill in your name, email, and message.' });
     }
-    db.prepare('INSERT INTO contact_messages (name, email, company, message) VALUES (?, ?, ?, ?)')
-      .run(name.trim(), email.trim(), company || null, message.trim());
+    await db.run('INSERT INTO contact_messages (name, email, company, message) VALUES (?, ?, ?, ?)',
+      [name.trim(), email.trim(), company || null, message.trim()]);
 
     await notify({
       subject: `New website enquiry — ${name}${company ? ' (' + company + ')' : ''}`,

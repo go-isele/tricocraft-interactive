@@ -2,10 +2,10 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+const pgSession = require('connect-pg-simple')(session);
 
 const { attachUser } = require('./middleware/auth');
-const db = require('./db/db'); // ensures schema is applied before routes touch it
+const db = require('./db/db');
 const siteConfig = require('./lib/site-config');
 const currencyLib = require('./lib/currency');
 
@@ -37,7 +37,10 @@ if (!isProd) {
 }
 
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: path.join(__dirname, 'db') }),
+  // connect-pg-simple creates/manages its own "session" table on the same
+  // Postgres database (createTableIfMissing: true) — nothing to migrate by
+  // hand, and sessions now survive an app restart same as before.
+  store: new pgSession({ pool: db.pool, createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
@@ -81,6 +84,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'internal_error', message: 'An unexpected error occurred. Please try again.' });
 });
 
-app.listen(PORT, () => {
-  console.log(`TrioCraft API server running → http://localhost:${PORT}`);
-});
+// Schema application is async now (Postgres, not better-sqlite3's
+// synchronous require-time db.exec) — apply it once before accepting
+// requests, so no route can touch a table that isn't there yet.
+db.ensureSchema()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`TrioCraft API server running → http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('[startup] failed to apply database schema:', err);
+    process.exit(1);
+  });

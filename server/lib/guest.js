@@ -9,17 +9,18 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../db/db');
 
-function findOrCreateGuestClient({ name, email, company, phone }) {
+async function findOrCreateGuestClient({ name, email, company, phone }) {
   const cleanEmail = (email || '').toLowerCase().trim();
-  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
+  const existing = await db.get('SELECT * FROM users WHERE email = ?', [cleanEmail]);
   if (existing) return existing;
 
   const randomPassword = crypto.randomBytes(18).toString('hex');
   const hash = bcrypt.hashSync(randomPassword, 10);
-  const info = db.prepare(
-    `INSERT INTO users (name, email, password_hash, role, company, phone) VALUES (?, ?, ?, 'client', ?, ?)`
-  ).run(name.trim(), cleanEmail, hash, company || null, phone || null);
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+  const info = await db.run(
+    `INSERT INTO users (name, email, password_hash, role, company, phone) VALUES (?, ?, ?, 'client', ?, ?)`,
+    [name.trim(), cleanEmail, hash, company || null, phone || null]
+  );
+  return db.get('SELECT * FROM users WHERE id = ?', [info.lastInsertRowid]);
 }
 
 module.exports = { findOrCreateGuestClient };

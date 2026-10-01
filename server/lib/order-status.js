@@ -97,20 +97,21 @@ const JOB_CARD_CHECKLISTS = {
 // tagging and job-card display: a catalogue-product order derives it from
 // products.category_id; a product-less Custom Brief order carries its own
 // orders.category_id instead.
-function resolveOrderCategory(db, order) {
+async function resolveOrderCategory(db, order) {
   if (order.product_id) {
-    return db.prepare(
-      `SELECT c.name, c.slug, c.service_code FROM products p JOIN categories c ON c.id = p.category_id WHERE p.id = ?`
-    ).get(order.product_id) || null;
+    return (await db.get(
+      `SELECT c.name, c.slug, c.service_code FROM products p JOIN categories c ON c.id = p.category_id WHERE p.id = ?`,
+      [order.product_id]
+    )) || null;
   }
   if (order.category_id) {
-    return db.prepare('SELECT name, slug, service_code FROM categories WHERE id = ?').get(order.category_id) || null;
+    return (await db.get('SELECT name, slug, service_code FROM categories WHERE id = ?', [order.category_id])) || null;
   }
   return null;
 }
 
-function addTimeline(db, orderId, stage, notes) {
-  db.prepare('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)').run(orderId, stage, notes || null);
+async function addTimeline(db, orderId, stage, notes) {
+  await db.run('INSERT INTO order_timeline (order_id, stage, notes) VALUES (?, ?, ?)', [orderId, stage, notes || null]);
 }
 
 module.exports = {

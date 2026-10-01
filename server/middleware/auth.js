@@ -1,7 +1,7 @@
 // Session-based auth helpers — converted from the v8 EJS app's
 // redirect/render behavior to pure JSON responses, since this server is now
 // an API-only backend consumed by the Next.js frontend. The session cookie
-// itself (express-session + connect-sqlite3) is unchanged — Next.js and
+// itself (express-session + connect-pg-simple) is unchanged — Next.js and
 // Express share it because both sit behind the same Nginx host/origin.
 
 function attachUser(db) {
