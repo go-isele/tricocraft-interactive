@@ -33,12 +33,20 @@
 -- and cross-border delivery, and AI-structured custom briefs. Layered on
 -- v3's print-specific pricing engine, pre-press checks, real print-shop
 -- order lifecycle, and M-Pesa payments.
+--
+-- v11: Google sign-in for marketplace customers via Clerk (admin/vendor
+-- logins are untouched — still plain email+password against this same
+-- table). A Google-only account has no password of ours to check, so
+-- password_hash had to become nullable; clerk_user_id is how we recognize
+-- the same person on their next Google sign-in, and also lets someone who
+-- originally registered with email+password later link Google to the same
+-- account (matched by email — see POST /api/auth/clerk-login).
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT, -- NULL for accounts created via Google (Clerk) sign-in
   role TEXT NOT NULL CHECK(role IN ('client','vendor','admin')) DEFAULT 'client',
   company TEXT,
   phone TEXT,
@@ -48,8 +56,17 @@ CREATE TABLE IF NOT EXISTS users (
   credit_terms_days INTEGER, -- 30/60/90 — set by admin once verified; NULL = not yet extended credit
   kra_pin TEXT, -- for e-TIMS / tax invoice display
   preferred_currency TEXT DEFAULT 'KES', -- display-only, see lib/currency.js
+  clerk_user_id TEXT UNIQUE, -- set the first time this person signs in with Google via Clerk
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- The two lines above only take effect via CREATE TABLE on a brand-new
+-- database. On a database that already has a `users` table (every existing
+-- deployment), these idempotent ALTERs bring it up to date on the next
+-- startup — both are no-ops if already applied, so it's safe to run on
+-- every boot alongside the CREATE TABLE IF NOT EXISTS statements below.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_user_id TEXT UNIQUE;
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS categories (
   id SERIAL PRIMARY KEY,

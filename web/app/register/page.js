@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { apiFetch } from '@/lib/api';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+
+// See the matching comment in web/app/login/page.js.
+const CLERK_ENABLED = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,6 +46,12 @@ export default function RegisterPage() {
       <h2>Create an Account</h2>
       <p className="sub">Get access to the Product Catalogue, Brand Vault, and order tracking.</p>
       {error && <div className="form-error">{error}</div>}
+      {CLERK_ENABLED && (
+        <>
+          <GoogleSignInButton />
+          <div className="form-note" style={{ textAlign: 'center', margin: '0.6em 0 1em' }}>or create an account with your email</div>
+        </>
+      )}
       <form onSubmit={onSubmit}>
         <div className="field"><label>Full Name</label><input type="text" name="name" required autoFocus /></div>
         <div className="field"><label>Email</label><input type="email" name="email" required /></div>

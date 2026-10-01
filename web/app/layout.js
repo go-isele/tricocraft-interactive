@@ -1,4 +1,5 @@
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
 import { AuthProvider } from "@/components/AuthProvider";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
@@ -52,9 +53,28 @@ async function getSiteConfig() {
   }
 }
 
+// ClerkProvider throws HARD (crashing every page, site-wide — not just
+// /login and /register) if NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY isn't set. That
+// matters here specifically because this app runs for a while with Google
+// sign-in deployed but Clerk not yet configured (see README-DEPLOY.md,
+// "Google sign-in (Clerk)") — so this can't assume the key is always
+// present. Only mount ClerkProvider once it actually is; GoogleSignInButton
+// checks the same flag client-side before ever calling a Clerk hook, so
+// /login and /register degrade to plain email+password with no crash either.
+const CLERK_ENABLED = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 export default async function RootLayout({ children }) {
   const config = await getSiteConfig();
   const site = config?.site || null;
+
+  const body = (
+    <AuthProvider>
+      <SiteHeader site={site} />
+      {children}
+      <SiteFooter site={site} />
+      <WhatsAppFloat site={site} />
+    </AuthProvider>
+  );
 
   return (
     <html lang="en">
@@ -67,12 +87,7 @@ export default async function RootLayout({ children }) {
         />
       </head>
       <body>
-        <AuthProvider>
-          <SiteHeader site={site} />
-          {children}
-          <SiteFooter site={site} />
-          <WhatsAppFloat site={site} />
-        </AuthProvider>
+        {CLERK_ENABLED ? <ClerkProvider>{body}</ClerkProvider> : body}
       </body>
     </html>
   );

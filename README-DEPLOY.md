@@ -30,6 +30,11 @@ Both apps run on the same machine behind one Nginx host, so the session
 cookie and client-side API calls work same-origin with zero CORS config —
 see the comments in `web/lib/api.js` and `server/server.js`.
 
+**Google sign-in:** marketplace customers can also sign up/in with Google,
+via Clerk — Clerk handles the OAuth flow entirely inside `web/`, then hands
+off to this same Postgres-backed session system (see section 10 below).
+Admin and vendor logins are untouched by this.
+
 **Why PostgreSQL and not SQLite:** an earlier version of this stack used
 `better-sqlite3`. That's a *native* Node module — it needs a prebuilt binary
 matching the exact Node version running it, and a very new/non-LTS Node
@@ -249,6 +254,82 @@ pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" backups/triocraft-T
 
 ---
 
+## 10. Google sign-in (Clerk)
+
+Marketplace customers (`/login` and `/register`) can sign up or sign in with
+their Google account, in addition to the existing email+password form.
+**Admin and vendor logins are completely unaffected** — they still go
+through the original email+password flow against the same `users` table,
+untouched.
+
+### How it fits together
+
+Clerk owns the entire Google OAuth handshake — this app never talks to
+Google, never sees a Google credential, and the Express API never talks to
+Clerk either. The flow is:
+
+1. Someone clicks "Continue with Google" on `/login` or `/register`. Clerk
+   redirects them to Google, then back to `/sso-callback`, which hands off to
+   `/auth/bridge`.
+2. `/auth/bridge` calls this app's own `/auth/clerk-sync` route (a Next.js
+   server-side route handler — deliberately **not** under `/api/`, since
+   Nginx sends everything under `/api/` straight to the Express backend and
+   would never let this reach Next.js — see `web/proxy.js`).
+3. `/auth/clerk-sync` verifies the Clerk session server-side, then makes one
+   internal request to the Express API's `POST /api/auth/clerk-login`,
+   carrying a shared secret both sides read from their own `.env`
+   (`INTERNAL_AUTH_SECRET`) — never anything the browser could forge.
+4. Express finds-or-creates the matching row in `users` (matched by email if
+   they'd previously registered with a password — this links the two sign-in
+   methods to one account) and sets the **exact same session cookie** the
+   email+password login sets.
+
+From that point on, cart, checkout, order history, and everything else work
+completely unaware Google was ever involved, because as far as the rest of
+the app is concerned, it's just another logged-in user.
+
+### Set up Clerk (one-time)
+
+1. Go to **https://clerk.com**, sign up, and create a new application. Name
+   it something like "TrioCraft".
+2. On the application's **Configure → SSO Connections** page, turn on
+   **Google**. Clerk's shared development/production Google OAuth
+   credentials work out of the box with no Google Cloud Console setup
+   needed — this is fine for launch; you can swap in your own Google OAuth
+   client later from the same page if you ever want TrioCraft's own name/logo
+   on Google's consent screen instead of Clerk's.
+3. On **API Keys**, copy the **Publishable key** (`pk_live_...` once you flip
+   the app to production mode, `pk_test_...` while testing) and the
+   **Secret key** (`sk_live_...` / `sk_test_...`).
+4. Generate the shared internal secret once:
+   ```bash
+   openssl rand -hex 32
+   ```
+
+### Environment variables
+
+`server/.env` (see `server/.env.example`):
+
+```bash
+INTERNAL_AUTH_SECRET=<the openssl rand value from step 4>
+```
+
+`web/.env.production.local` (see `web/env.production.example`) — remember
+`NEXT_PUBLIC_*` values are baked in at **build time**, so set these before
+`npm run build`, not just before starting the server:
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+INTERNAL_AUTH_SECRET=<the EXACT SAME value as server/.env above>
+```
+
+Then rebuild and restart as usual (`./deploy.sh`, or steps 4/6 above for a
+first-time setup). Test it by opening `/register`, clicking "Continue with
+Google," and confirming you land on `/marketplace` signed in.
+
+---
+
 ## Ongoing deploys
 
 From your own machine:
@@ -294,3 +375,10 @@ script for exactly what it does and doesn't do.
   you're running code from before the Postgres migration — pull the latest
   `main` and re-run `npm ci` in `server/`; this error should not occur on
   current code at all, since `pg` has no native binary to mismatch.
+- **"Continue with Google" does nothing, or the API returns `not_configured`
+  / 403 on sign-in**: `INTERNAL_AUTH_SECRET` is missing, or doesn't match
+  between `server/.env` and `web/.env.production.local` — see section 10.
+- **Google sign-in redirects back to `/login` with an error, or Clerk shows
+  "Invalid publishable key"**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` wasn't set
+  (or wasn't a real key) at **build time** — same `NEXT_PUBLIC_*` rebuild
+  rule as `NEXT_PUBLIC_API_URL` above.
