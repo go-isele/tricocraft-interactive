@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<% if (currentUser) { %>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'client', dashActive: 'catalogue' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="crumbs" style="margin-bottom:18px"><a href="/marketplace">Product Catalogue</a> &nbsp;/&nbsp; <%= product.category_name %></div>
+      <%- include('../partials/product-body', { product, providers, currentUser, pricing }) %>
+    </div>
+  </div>
+</div>
+<% } else { %>
+<%- include('../partials/site-header') %>
+<div class="public-shell">
+  <div class="crumbs" style="margin:24px 0 0"><a href="/marketplace">Product Catalogue</a> &nbsp;/&nbsp; <%= product.category_name %></div>
+  <%- include('../partials/product-body', { product, providers, currentUser, pricing }) %>
+</div>
+<%- include('../partials/site-footer') %>
+<%- include('../partials/whatsapp-float') %>
+<% } %>
+</body>
+</html>

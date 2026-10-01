@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<%- include('../partials/site-header') %>
+
+<section class="hero" style="padding:56px 0 40px">
+  <div class="container">
+    <div class="eyebrow">⬡ Resources</div>
+    <h1 style="font-size:40px">Guides, tips, and playbooks</h1>
+    <p class="lede">Practical guidance on branding, production, and getting the most out of the Production Marketplace.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <% if (!posts.length) { %>
+      <div class="empty-state"><div class="ico">✎</div><p>No articles published yet.</p></div>
+    <% } else { %>
+      <div class="blog-grid">
+        <% posts.forEach(p => { %>
+          <a class="blog-card" href="/resources/<%= p.slug %>">
+            <div class="thumb">▢</div>
+            <div class="body">
+              <span class="tag"><%= p.eyebrow %></span>
+              <h4><%= p.title %></h4>
+              <p><%= p.excerpt %></p>
+              <div class="meta"><%= new Date(p.published_at).toLocaleDateString('en-KE', { year:'numeric', month:'long', day:'numeric' }) %> · <%= p.read_minutes %> min read</div>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/site-footer') %>
+<%- include('../partials/whatsapp-float') %>
+</body>
+</html>

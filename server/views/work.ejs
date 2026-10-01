@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head') %></head>
+<body>
+<%- include('partials/site-header') %>
+
+<section class="hero" style="padding:56px 0 36px">
+  <div class="container">
+    <div class="eyebrow">⬡ Our Work</div>
+    <h1 style="font-size:40px">Installations, not just print jobs.</h1>
+    <p class="lede">A sample of offices, events, apparel runs, and vehicle fleets TrioCraft has branded end to end.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="work-filters" id="workFilters">
+      <button type="button" class="active" data-filter="all">All</button>
+      <% projectCategories.forEach(c => { %>
+        <button type="button" data-filter="<%= c.slug %>"><%= c.label %></button>
+      <% }) %>
+    </div>
+
+    <div class="work-grid" id="workGrid">
+      <% projects.forEach(p => { %>
+        <div class="work-card" data-category="<%= p.category %>">
+          <div class="thumb"><% if (p.image) { %><img src="<%= p.image %>" alt="<%= p.title %>"><% } else { %><%= p.icon %><% } %></div>
+          <div class="body">
+            <div class="loc"><%= p.location %></div>
+            <h4><%= p.title %></h4>
+            <p><%= p.description %></p>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="cta-band">
+      <h3>See your brand here next.</h3>
+      <p>Tell us what you're transforming — office, event, fleet, or a full campaign.</p>
+      <a class="btn btn-primary" href="/marketplace/custom-brief">Submit a Custom Brief →</a>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/site-footer') %>
+<%- include('partials/whatsapp-float') %>
+
+<script>
+(function () {
+  var filters = document.querySelectorAll('#workFilters button');
+  var cards = document.querySelectorAll('#workGrid .work-card');
+  filters.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      filters.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var f = btn.getAttribute('data-filter');
+      cards.forEach(function (card) {
+        card.style.display = (f === 'all' || card.getAttribute('data-category') === f) ? '' : 'none';
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

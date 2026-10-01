@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head', { metaDescription }) %></head>
+<body>
+<%- include('partials/site-header') %>
+
+<section class="hero" style="padding:56px 0 40px">
+  <div class="container">
+    <div class="eyebrow">⬡ Capability Statement</div>
+    <h1 style="font-size:38px">Eleven core service capabilities. One accountable team.</h1>
+    <p class="lede">TrioCraft Brands Ltd is a full-service branding, design, and print solutions firm delivering end-to-end brand execution for corporate, government, NGO, and political clients. Never compete on price — compete on creativity, quality, speed, professionalism, reliability.</p>
+    <div class="sector-row">
+      <span class="sector-pill">Government Institutions</span>
+      <span class="sector-pill">NGOs &amp; Development Partners</span>
+      <span class="sector-pill">SMEs &amp; Corporates</span>
+      <span class="sector-pill">Political Campaigns</span>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container" style="max-width:820px">
+    <h2 style="font-size:24px;margin-bottom:14px">Company Overview</h2>
+    <p style="color:var(--ink-soft);line-height:1.75">We operate as a creative-led, process-driven agency, combining strategy, design, production, and project management to deliver high-impact branding solutions with speed, precision, and consistency. Our model leverages a curated production network, allowing us to deliver scalable, high-quality outputs without the limitations of traditional print shops.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-hd">
+      <div class="eyebrow">Core Service Capabilities</div>
+      <h2>11 core service categories</h2>
+      <p>Each category below is quotable through the Product Catalogue or a Custom Brief — expand a card for material standards, finishing options, and how it's invoiced against an LPO.</p>
+    </div>
+    <div class="cap-grid">
+      <% categories.forEach(c => { %>
+        <details class="cap-card">
+          <summary>
+            <span class="cap-code"><%= c.service_code %></span>
+            <span class="cap-ico"><%= c.icon %></span>
+            <span class="cap-title"><%= c.name %></span>
+            <span class="cap-toggle">＋</span>
+          </summary>
+          <div class="cap-body">
+            <p><%= c.description %></p>
+            <% if (c.specs) { %>
+              <div class="spec-row"><span class="spec-lbl">Material Standards</span><span><%= c.specs.materialStandards %></span></div>
+              <div class="spec-row"><span class="spec-lbl">Finishing Options</span><span><%= c.specs.finishingOptions %></span></div>
+              <div class="spec-row"><span class="spec-lbl">LPO / Invoicing</span><span><%= c.specs.lpoCompliance %></span></div>
+            <% } %>
+            <% if (c.slug === 'graphic-design-creative') { %>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+                <a class="btn btn-outline btn-sm" href="/services/graphic-design-creative">View Full Category Page →</a>
+                <a class="btn btn-outline btn-sm" href="/marketplace?category=<%= c.slug %>">Browse <%= c.name %> →</a>
+              </div>
+            <% } else { %>
+              <a class="btn btn-outline btn-sm" style="margin-top:14px" href="/marketplace?category=<%= c.slug %>">Browse <%= c.name %> →</a>
+            <% } %>
+          </div>
+        </details>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--white);border-top:0.5px solid var(--border-md);border-bottom:0.5px solid var(--border-md)">
+  <div class="container">
+    <div class="section-hd">
+      <div class="eyebrow">Key Differentiators</div>
+      <h2>Why institutional clients work with TrioCraft</h2>
+    </div>
+    <div class="svc-grid diff-grid">
+      <% DIFFERENTIATORS.forEach((d, i) => { %>
+        <div class="svc-card">
+          <div class="ico"><%= i + 1 %></div>
+          <h3><%= d.title %></h3>
+          <p><%= d.body %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-hd">
+      <div class="eyebrow">Project Approach</div>
+      <h2>A repeatable six-step methodology</h2>
+    </div>
+    <div class="steps method-steps">
+      <% METHODOLOGY_STEPS.forEach((s, i) => { %>
+        <div class="step"><div class="num"><%= i + 1 %></div><h4><%= s.title %></h4><p><%= s.body %></p></div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--white);border-top:0.5px solid var(--border-md);border-bottom:0.5px solid var(--border-md)">
+  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+    <div>
+      <h2 style="font-size:22px;margin-bottom:14px">Quality &amp; Compliance</h2>
+      <ul class="check-list">
+        <% QUALITY_POINTS.forEach(q => { %><li><%= q %></li><% }) %>
+      </ul>
+    </div>
+    <div>
+      <h2 style="font-size:22px;margin-bottom:14px">Client Value Proposition</h2>
+      <ul class="check-list">
+        <% VALUE_PROPS.forEach(v => { %><li><%= v %></li><% }) %>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="max-width:760px">
+    <div class="cta-band">
+      <h3>"<%= site.tagline %>"</h3>
+      <p>TrioCraft positions itself not just as a service provider, but as a strategic branding partner capable of executing projects at scale with precision and excellence.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:22px">
+        <a class="btn btn-primary" href="/marketplace/custom-brief">Submit a Custom Brief →</a>
+        <a class="btn btn-outline" style="border-color:rgba(255,255,255,.3);color:#fff" href="<%= site.whatsappLink %>" target="_blank" rel="noopener">Discuss on WhatsApp</a>
+      </div>
+      <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.9">
+        📞 <%= site.phoneDisplay %> &nbsp;·&nbsp; ✉ <%= site.email %> &nbsp;·&nbsp; <%= site.address %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/site-footer') %>
+<%- include('partials/whatsapp-float') %>
+</body>
+</html>

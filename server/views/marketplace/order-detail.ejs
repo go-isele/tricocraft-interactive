@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'client', dashActive: 'orders' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="crumbs" style="margin-bottom:18px"><a href="/marketplace/orders">My Orders</a> &nbsp;/&nbsp; Order #<%= order.id %></div>
+      <div class="dash-hd">
+        <div><h1><%= order.title %></h1><p>Placed <%= new Date(order.created_at).toLocaleDateString('en-KE') %></p></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <a class="wa-cta-outline" href="<%= waLink %>" target="_blank" rel="noopener" title="Message us about this order">
+            <svg viewBox="0 0 32 32" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M16.02 3C9.4 3 4 8.36 4 15c0 2.34.64 4.53 1.75 6.4L3 29l7.8-2.68A11.9 11.9 0 0 0 16.02 27C22.63 27 28 21.64 28 15S22.63 3 16.02 3Z"/></svg>
+          </a>
+          <span class="badge badge-<%= order.status %>" style="font-size:13px;padding:6px 16px"><%= STATUS_LABELS[order.status] || order.status %></span>
+        </div>
+      </div>
+
+      <% if (mpesa === 'sent') { %><div class="form-success">Payment prompt sent — check your phone and enter your PIN to complete payment.</div><% } %>
+      <% if (mpesa === 'error') { %><div class="form-error">Couldn't start the payment — check the phone number and try again.</div><% } %>
+
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px">
+        <div class="card">
+          <h3>Order Details</h3>
+          <div style="font-size:13.5px;line-height:2">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Product</span><span><%= order.product_name || 'Custom Brief' %></span></div>
+            <% if (category) { %>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Service Category</span><span><span class="cat-code-pill"><%= category.service_code %></span> <%= category.name %></span></div>
+            <% } %>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Quantity</span><span><%= order.quantity %></span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Provider</span><span><%= order.provider_name || 'To be assigned' %></span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Quoted Price</span><span><%= order.quoted_price ? fx.formatAmount(order.quoted_price * order.quantity, currency) : (order.calculated_unit_price ? fx.formatAmount(order.calculated_unit_price * order.quantity, currency) + ' (estimate)' : 'Pending') %></span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Payment</span><span class="badge badge-<%= order.payment_status %>"><%= order.payment_status %></span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Deadline</span><span><%= order.deadline || '—' %></span></div>
+          </div>
+          <div class="progress-bar" style="margin-top:16px"><div style="width:<%= order.progress %>%"></div></div>
+          <% if (order.brief) { %><div style="margin-top:16px;font-size:13px;color:var(--slate-lt)"><strong>Brief:</strong> <%= order.brief %></div><% } %>
+
+          <% if (order.mockup_filename) { %>
+            <div style="margin-top:16px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Logo Placement Preview</div>
+              <a href="/uploads/mockups/<%= order.mockup_filename %>" target="_blank" rel="noopener">
+                <img src="/uploads/mockups/<%= order.mockup_filename %>" alt="Logo placement preview" style="max-width:220px;border-radius:var(--r-sm);border:0.5px solid var(--border-md)">
+              </a>
+              <div style="font-size:11px;color:var(--slate-lt);margin-top:4px">From the live mockup editor — a placement preview, not a colour-accurate proof.</div>
+            </div>
+          <% } %>
+
+          <% if (aiBrief) { %>
+            <div class="ai-brief-summary" style="margin-top:14px">
+              <span class="tag"><%= aiBrief.method === 'ai' ? 'AI-Structured Brief' : 'Structured Brief' %></span>
+              <% if (aiBrief.dimensions) { %><div><strong>Dimensions:</strong> <%= aiBrief.dimensions %></div><% } %>
+              <div><strong>Colour mode:</strong> <%= aiBrief.colorMode %></div>
+              <% if (aiBrief.placementNotes && aiBrief.placementNotes.length) { %><ul><% aiBrief.placementNotes.forEach(n => { %><li><%= n %></li><% }) %></ul><% } %>
+            </div>
+          <% } %>
+
+          <% if (options && options.length) { %>
+            <div style="margin-top:16px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Configuration</div>
+              <% options.forEach(o => { %>
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span style="color:var(--slate-lt)"><%= o.optionName %></span><span><%= o.valueLabel %><%= o.priceDelta ? ' (' + (o.priceDelta > 0 ? '+' : '') + 'KES ' + o.priceDelta.toLocaleString() + ')' : '' %></span></div>
+              <% }) %>
+            </div>
+          <% } %>
+
+          <% if (order.delivery_method) { %>
+            <div style="margin-top:16px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Delivery</div>
+              <div style="font-size:13px;color:var(--ink-soft)">
+                <%= (DELIVERY_METHODS.find(m => m.value === order.delivery_method) || {}).label || order.delivery_method %>
+                <% if (order.delivery_partner) { %> via <%= order.delivery_partner %><% } %>
+                <% if (order.delivery_country) { %><br>Destination: <%= (eacCountries.find(c => c.code === order.delivery_country) || {}).name || order.delivery_country %><% } %>
+                <% if (order.cross_border_cost_kes) { %><br>Est. logistics cost: KES <%= order.cross_border_cost_kes.toLocaleString() %><% } %>
+                <% if (order.delivery_town) { %><br><%= order.delivery_town %><% } %>
+                <% if (order.delivery_address) { %><br><%= order.delivery_address %><% } %>
+              </div>
+            </div>
+          <% } %>
+
+          <% if (order.payment_terms && order.payment_terms !== 'due_on_delivery') { %>
+            <div style="margin-top:16px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Credit Terms</div>
+              <div style="font-size:13px;color:var(--ink-soft)">
+                <%= order.payment_terms.replace('net', 'Net ') %> days<% if (order.lpo_number) { %> · LPO No: <%= order.lpo_number %><% } %>
+                <br>Invoice: <span class="badge badge-<%= order.invoice_status %>"><%= order.invoice_status.replace('_',' ') %></span>
+                <% if (order.invoice_due_date) { %> · due <%= order.invoice_due_date %><% } %>
+              </div>
+            </div>
+          <% } %>
+
+          <div style="margin-top:16px">
+            <a class="btn btn-outline btn-sm" href="/marketplace/orders/<%= order.id %>/invoice.pdf" target="_blank">
+              📄 Download <%= order.invoice_status === 'not_invoiced' ? 'Proforma Invoice' : 'Tax Invoice' %>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Payment</h3>
+            <% if (!payments.length) { %>
+              <p style="font-size:13px;color:var(--slate-lt);margin-bottom:12px">No payment attempts yet.</p>
+            <% } else { %>
+              <% payments.forEach(p => { %>
+                <div class="pay-row">
+                  <div>
+                    <div style="font-size:13.5px;font-weight:600"><%= p.currency || 'KES' %> <%= p.amount.toLocaleString() %> · <%= p.method.toUpperCase() %></div>
+                    <div class="meta"><%= new Date(p.created_at).toLocaleString('en-KE') %><% if (p.mpesa_receipt) { %> · Receipt: <%= p.mpesa_receipt %><% } %></div>
+                  </div>
+                  <span class="badge badge-<%= p.status %>"><%= p.status %></span>
+                </div>
+              <% }) %>
+            <% } %>
+            <% if (order.payment_status !== 'paid' && (order.quoted_price || order.calculated_unit_price)) { %>
+              <form method="POST" action="/marketplace/orders/<%= order.id %>/pay-mpesa" class="mpesa-form">
+                <input type="tel" name="phone" placeholder="07XX XXX XXX" required>
+                <button class="btn btn-dark btn-sm" type="submit">Pay with M-Pesa</button>
+              </form>
+              <% if (order.currency && order.currency !== 'KES') { %>
+                <form method="POST" action="/marketplace/orders/<%= order.id %>/pay-regional" class="mpesa-form" style="margin-top:8px">
+                  <input type="tel" name="phone" placeholder="Mobile money number" required>
+                  <input type="hidden" name="provider" value="<%= order.currency === 'UGX' ? 'momo' : 'airtel_money' %>">
+                  <button class="btn btn-outline btn-sm" type="submit"><%= order.currency === 'UGX' ? 'Pay with MTN MoMo' : 'Pay with Airtel Money' %></button>
+                </form>
+              <% } %>
+              <p style="font-size:11px;color:var(--slate-lt);margin-top:8px">You'll get a payment prompt on your phone for <%= fx.formatAmount((order.quoted_price || order.calculated_unit_price) * order.quantity, currency) %>.</p>
+            <% } %>
+          </div>
+
+          <div class="card">
+            <h3>Timeline</h3>
+            <div class="timeline">
+              <% timeline.forEach(t => { %>
+                <div class="item">
+                  <div class="stage"><%= t.stage %></div>
+                  <% if (t.notes) { %><div class="notes"><%= t.notes %></div><% } %>
+                  <div class="when"><%= new Date(t.created_at).toLocaleString('en-KE') %></div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

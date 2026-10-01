@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'vendor', dashActive: 'orders' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="crumbs" style="margin-bottom:18px"><a href="/vendor">Assigned Orders</a> &nbsp;/&nbsp; Order #<%= order.id %></div>
+      <div class="dash-hd">
+        <div><h1><%= order.title %></h1><p>Client: <%= order.client_name %></p></div>
+        <span class="badge badge-<%= order.status %>" style="font-size:13px;padding:6px 16px"><%= STATUS_LABELS[order.status] %></span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px">
+        <div class="card">
+          <h3>Update Status</h3>
+          <% if (NEXT_STATUS[order.status]) { %>
+            <p style="font-size:13px;color:var(--slate-lt);margin-bottom:14px">Move this order forward to <strong><%= STATUS_LABELS[NEXT_STATUS[order.status]] %></strong>.</p>
+            <form method="POST" action="/vendor/orders/<%= order.id %>/advance">
+              <% if (jobCard) { %>
+                <div class="job-card-checklist">
+                  <div class="stage-lbl"><%= jobCard.title %></div>
+                  <% jobCard.items.forEach((item, i) => { %>
+                    <label><input type="checkbox" name="checklist_items" value="<%= item %>"> <%= item %></label>
+                  <% }) %>
+                </div>
+              <% } %>
+              <div class="field"><label>Note (optional)</label><textarea name="note" placeholder="Production notes for the client / TrioCraft team"></textarea></div>
+              <button class="btn btn-primary btn-block" type="submit">Advance to <%= STATUS_LABELS[NEXT_STATUS[order.status]] %> →</button>
+            </form>
+          <% } else { %>
+            <p style="font-size:13px;color:var(--slate-lt)">This order isn't in a production stage you can advance right now.</p>
+          <% } %>
+          <div style="margin-top:16px;font-size:13.5px;line-height:2">
+            <% if (category) { %>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Service Category</span><span><span class="cat-code-pill"><%= category.service_code %></span> <%= category.name %></span></div>
+            <% } %>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Quantity</span><span><%= order.quantity %></span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--slate-lt)">Deadline</span><span><%= order.deadline || '—' %></span></div>
+          </div>
+          <% if (order.brief) { %><div style="margin-top:12px;font-size:13px;color:var(--slate-lt)"><strong>Brief:</strong> <%= order.brief %></div><% } %>
+
+          <% if (order.mockup_filename) { %>
+            <div style="margin-top:12px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Logo Placement Preview</div>
+              <a href="/uploads/mockups/<%= order.mockup_filename %>" target="_blank" rel="noopener">
+                <img src="/uploads/mockups/<%= order.mockup_filename %>" alt="Logo placement preview" style="max-width:200px;border-radius:var(--r-sm);border:0.5px solid var(--border-md)">
+              </a>
+            </div>
+          <% } %>
+
+          <% if (aiBrief) { %>
+            <div class="ai-brief-summary" style="margin-top:12px">
+              <span class="tag"><%= aiBrief.method === 'ai' ? 'AI-Structured Brief' : 'Structured Brief' %></span>
+              <% if (aiBrief.dimensions) { %><div><strong>Dimensions:</strong> <%= aiBrief.dimensions %></div><% } %>
+              <div><strong>Colour mode:</strong> <%= aiBrief.colorMode %></div>
+              <% if (aiBrief.placementNotes && aiBrief.placementNotes.length) { %><ul><% aiBrief.placementNotes.forEach(n => { %><li><%= n %></li><% }) %></ul><% } %>
+            </div>
+          <% } %>
+
+          <% if (options && options.length) { %>
+            <div style="margin-top:14px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Configuration</div>
+              <% options.forEach(o => { %>
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:var(--slate-lt)"><%= o.optionName %></span><span><%= o.valueLabel %></span></div>
+              <% }) %>
+            </div>
+          <% } %>
+          <% if (order.delivery_method) { %>
+            <div style="margin-top:14px">
+              <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:8px">Delivery</div>
+              <div style="font-size:13px;color:var(--ink-soft)">
+                <%= (DELIVERY_METHODS.find(m => m.value === order.delivery_method) || {}).label || order.delivery_method %>
+                <% if (order.delivery_partner) { %> via <%= order.delivery_partner %><% } %>
+                <% if (order.delivery_country) { %><br>Destination: <%= (EAC_COUNTRIES.find(c => c.code === order.delivery_country) || {}).name || order.delivery_country %><% } %>
+                <% if (order.cross_border_cost_kes) { %><br>Est. logistics cost: KES <%= order.cross_border_cost_kes.toLocaleString() %><% } %>
+                <% if (order.delivery_town) { %><br><%= order.delivery_town %><% } %>
+              </div>
+            </div>
+          <% } %>
+        </div>
+
+        <div>
+          <% if (payments && payments.length) { %>
+            <div class="card">
+              <h3>Payment Status</h3>
+              <% payments.forEach(p => { %>
+                <div class="pay-row">
+                  <div>
+                    <div style="font-size:13.5px;font-weight:600">KES <%= p.amount.toLocaleString() %> · <%= p.method.toUpperCase() %></div>
+                    <div class="meta"><%= new Date(p.created_at).toLocaleString('en-KE') %><% if (p.mpesa_receipt) { %> · Receipt: <%= p.mpesa_receipt %><% } %></div>
+                  </div>
+                  <span class="badge badge-<%= p.status %>"><%= p.status %></span>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+
+          <div class="card">
+            <h3>Timeline</h3>
+            <div class="timeline">
+              <% timeline.forEach(t => { %>
+                <div class="item">
+                  <div class="stage"><%= t.stage %></div>
+                  <% if (t.notes) { %><div class="notes"><%= t.notes %></div><% } %>
+                  <div class="when"><%= new Date(t.created_at).toLocaleString('en-KE') %></div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.querySelectorAll('.job-card-checklist input[type=checkbox]').forEach(function (cb) {
+  cb.addEventListener('change', function () { cb.closest('label').classList.toggle('checked', cb.checked); });
+});
+</script>
+</body>
+</html>

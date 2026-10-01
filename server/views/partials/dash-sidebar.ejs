@@ -1,0 +1,51 @@
+<%
+// Expects: dashRole = 'client' | 'admin' | 'vendor', dashActive = string key
+const role = typeof dashRole !== 'undefined' ? dashRole : 'client';
+const active = typeof dashActive !== 'undefined' ? dashActive : '';
+%>
+<aside class="dash-sidebar">
+  <a href="/" class="brand" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    <img src="/static/img/triocraft-icon.svg" class="brand-mark" alt="TrioCraft">
+    <div>
+      <div class="brand-name" style="font-size:16px">TrioCraft</div>
+      <div class="brand-sub" style="font-size:9.5px">
+        <% if (role === 'admin') { %>Admin<% } else if (role === 'vendor') { %>Vendor Portal<% } else { %>Production Marketplace<% } %>
+      </div>
+    </div>
+  </a>
+
+  <% if (role === 'client') { %>
+    <div class="nav-section">
+      <div class="nav-lbl">Marketplace</div>
+      <a href="/marketplace" class="nav-item <%= active==='catalogue'?'active':'' %>"><span class="nav-ico">⊞</span> Product Catalogue</a>
+      <a href="/marketplace/custom-brief" class="nav-item <%= active==='custom'?'active':'' %>"><span class="nav-ico">◈</span> Custom Brief</a>
+      <a href="/marketplace/cart" class="nav-item <%= active==='cart'?'active':'' %>"><span class="nav-ico">🛒</span> Cart</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-lbl">My Orders</div>
+      <a href="/marketplace/orders" class="nav-item <%= active==='orders'?'active':'' %>"><span class="nav-ico">📦</span> Active &amp; History</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-lbl">Assets</div>
+      <a href="/marketplace/brand-vault" class="nav-item <%= active==='vault'?'active':'' %>"><span class="nav-ico">◉</span> Brand Vault</a>
+    </div>
+  <% } else if (role === 'admin') { %>
+    <div class="nav-section">
+      <div class="nav-lbl">Overview</div>
+      <a href="/admin" class="nav-item <%= active==='dashboard'?'active':'' %>"><span class="nav-ico">⊡</span> Dashboard</a>
+      <a href="/admin/orders" class="nav-item <%= active==='orders'?'active':'' %>"><span class="nav-ico">📦</span> All Orders</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-lbl">Manage</div>
+      <a href="/admin/catalogue" class="nav-item <%= active==='catalogue'?'active':'' %>"><span class="nav-ico">⊞</span> Catalogue &amp; Providers</a>
+      <a href="/admin/clients" class="nav-item <%= active==='clients'?'active':'' %>"><span class="nav-ico">🏢</span> Corporate Accounts</a>
+      <a href="/admin/fx-rates" class="nav-item <%= active==='fx'?'active':'' %>"><span class="nav-ico">💱</span> FX Rates</a>
+      <a href="/admin/blog" class="nav-item <%= active==='blog'?'active':'' %>"><span class="nav-ico">✎</span> Resources / Blog</a>
+    </div>
+  <% } else if (role === 'vendor') { %>
+    <div class="nav-section">
+      <div class="nav-lbl">Production</div>
+      <a href="/vendor" class="nav-item <%= active==='orders'?'active':'' %>"><span class="nav-ico">🏭</span> Assigned Orders</a>
+    </div>
+  <% } %>
+</aside>

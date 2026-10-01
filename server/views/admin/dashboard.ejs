@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'admin', dashActive: 'dashboard' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>Admin Dashboard</h1><p>Executive overview of the Production Marketplace.</p></div></div>
+
+      <div class="stat-row">
+        <div class="stat-tile"><div class="lbl">Total Orders</div><div class="val"><%= stats.orders %></div></div>
+        <div class="stat-tile"><div class="lbl">Active Orders</div><div class="val"><%= stats.activeOrders %></div></div>
+        <div class="stat-tile"><div class="lbl">Clients</div><div class="val"><%= stats.clients %></div></div>
+        <div class="stat-tile"><div class="lbl">Quoted Pipeline (KES)</div><div class="val"><%= stats.revenueQuoted.toLocaleString() %></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-tile"><div class="lbl">Pending Payments</div><div class="val"><%= stats.pendingPayments %></div></div>
+        <div class="stat-tile"><div class="lbl">Corporate Accounts</div><div class="val"><%= stats.corporateAccounts %></div></div>
+        <div class="stat-tile"><div class="lbl">Overdue Invoices</div><div class="val" style="<%= stats.overdueInvoices ? 'color:var(--rust)' : '' %>"><%= stats.overdueInvoices %></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Recent Orders</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order</th><th>Client</th><th>Qty</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% recentOrders.forEach(o => { %>
+                <tr>
+                  <td><%= o.title %></td>
+                  <td><%= o.client_company || o.client_name %></td>
+                  <td><%= o.quantity %></td>
+                  <td><span class="badge badge-<%= o.status %>"><%= STATUS_LABELS[o.status] %></span></td>
+                  <td><a class="btn btn-outline btn-sm" href="/admin/orders/<%= o.id %>">Manage</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

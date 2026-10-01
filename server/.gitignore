@@ -1,0 +1,12 @@
+node_modules/
+.env
+db/*.sqlite
+db/*.sqlite-wal
+db/*.sqlite-shm
+uploads/brand-vault/*
+!uploads/brand-vault/.gitkeep
+uploads/lpo/*
+!uploads/lpo/.gitkeep
+uploads/mockups/*
+!uploads/mockups/.gitkeep
+*.log

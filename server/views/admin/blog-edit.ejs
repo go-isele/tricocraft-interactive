@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'admin', dashActive: 'blog' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="crumbs" style="margin-bottom:18px"><a href="/admin/blog">Resources / Blog</a> &nbsp;/&nbsp; <%= post ? 'Edit' : 'New' %></div>
+      <div class="dash-hd"><div><h1><%= post ? 'Edit Post' : 'New Post' %></h1></div></div>
+
+      <div class="card">
+        <form method="POST" action="/admin/blog/save">
+          <% if (post) { %><input type="hidden" name="id" value="<%= post.id %>"><% } %>
+          <div class="field"><label>Title</label><input type="text" name="title" required value="<%= post ? post.title : '' %>"></div>
+          <div class="field"><label>Slug (URL path)</label><input type="text" name="slug" required value="<%= post ? post.slug : '' %>" placeholder="production-marketplace-guide"></div>
+          <div class="field"><label>Eyebrow / Category Tag</label><input type="text" name="eyebrow" value="<%= post ? post.eyebrow : 'Getting Started' %>"></div>
+          <div class="field"><label>Excerpt</label><textarea name="excerpt"><%= post ? post.excerpt : '' %></textarea></div>
+          <div class="field"><label>Meta Description (SEO)</label><textarea name="meta_description"><%= post ? post.meta_description : '' %></textarea></div>
+          <div class="field"><label>Read Time (minutes)</label><input type="number" name="read_minutes" value="<%= post ? post.read_minutes : 5 %>"></div>
+          <div class="field"><label>Body (HTML)</label><textarea name="body_html" style="min-height:340px;font-family:monospace;font-size:12.5px" required><%= post ? post.body_html : '' %></textarea></div>
+          <button class="btn btn-primary btn-block" type="submit">Save Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

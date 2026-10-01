@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'admin', dashActive: 'orders' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>All Orders</h1><p><%= orders.length %> order(s)<%= statusFilter ? ' · filtered by ' + STATUS_LABELS[statusFilter] : '' %></p></div></div>
+
+      <div class="cat-filter">
+        <a href="/admin/orders" class="<%= !statusFilter?'active':'' %>">All</a>
+        <% Object.entries(STATUS_LABELS).forEach(([k,v]) => { %>
+          <a href="/admin/orders?status=<%= k %>" class="<%= statusFilter===k?'active':'' %>"><%= v %></a>
+        <% }) %>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order</th><th>Client</th><th>Qty</th><th>Provider</th><th>Status</th><th>Progress</th><th></th></tr></thead>
+            <tbody>
+              <% orders.forEach(o => { %>
+                <tr>
+                  <td><%= o.title %></td>
+                  <td><%= o.client_company || o.client_name %></td>
+                  <td><%= o.quantity %></td>
+                  <td><%= o.provider_name || '—' %></td>
+                  <td><span class="badge badge-<%= o.status %>"><%= STATUS_LABELS[o.status] %></span></td>
+                  <td style="width:110px"><div class="progress-bar"><div style="width:<%= o.progress %>%"></div></div></td>
+                  <td><a class="btn btn-outline btn-sm" href="/admin/orders/<%= o.id %>">Manage</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F1A2E"/>
+      <stop offset="100%" stop-color="#1C2B42"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="10" fill="#C4451A"/>
+  <text x="80" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="86" font-weight="500" fill="#FFFFFF">TrioCraft</text>
+  <text x="80" y="360" font-family="Georgia, serif" font-size="34" font-style="italic" fill="#C4451A">Crafting Dreams, Forged in Brotherhood.</text>
+  <text x="80" y="420" font-family="Arial, sans-serif" font-size="24" fill="#A0AEC0">Transforming physical spaces into immersive brand experiences.</text>
+</svg>

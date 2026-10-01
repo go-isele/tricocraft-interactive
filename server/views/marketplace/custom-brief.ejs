@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<% if (currentUser) { %>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'client', dashActive: 'custom' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>Custom Brief</h1><p>Anything that needs a genuinely original look — rebrands, campaigns, product launches. TrioCraft's designers build it from scratch.</p></div></div>
+      <div class="card" style="max-width:640px">
+        <% if (error) { %><div class="form-error"><%= error %></div><% } %>
+        <%- include('../partials/custom-brief-form', { categories, currentUser, deliveryMethods, eacCountries, crossBorderPartners, canUseCredit, creditTermsDays }) %>
+      </div>
+    </div>
+  </div>
+</div>
+<% } else { %>
+<%- include('../partials/site-header') %>
+<section class="hero" style="padding:56px 0 36px">
+  <div class="container">
+    <div class="eyebrow">⬡ Custom Brief</div>
+    <h1 style="font-size:38px">Tell us what you're transforming.</h1>
+    <p class="lede">No account needed — describe the project and TrioCraft's design team will follow up with a quote. We'll set you up with order tracking automatically.</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0">
+  <div class="container" style="max-width:640px">
+    <div class="card">
+      <% if (error) { %><div class="form-error"><%= error %></div><% } %>
+      <%- include('../partials/custom-brief-form', { categories, currentUser, deliveryMethods, eacCountries, crossBorderPartners, canUseCredit, creditTermsDays }) %>
+    </div>
+  </div>
+</section>
+<%- include('../partials/site-footer') %>
+<%- include('../partials/whatsapp-float') %>
+<% } %>
+</body>
+</html>

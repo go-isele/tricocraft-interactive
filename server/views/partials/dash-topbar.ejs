@@ -1,0 +1,12 @@
+<div class="dash-topbar">
+  <div style="font-size:13px;color:var(--slate-lt)">
+    <%= currentUser ? currentUser.company || currentUser.name : '' %>
+  </div>
+  <div class="hdr-actions">
+    <%- include('currency-switcher') %>
+    <a class="btn btn-outline btn-sm" href="/">View Site</a>
+    <form method="POST" action="/logout" style="display:inline">
+      <button class="btn btn-dark btn-sm" type="submit">Log Out</button>
+    </form>
+  </div>
+</div>

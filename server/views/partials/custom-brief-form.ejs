@@ -1,0 +1,164 @@
+<form method="POST" action="/marketplace/custom-brief" enctype="multipart/form-data" id="briefForm">
+  <% if (!currentUser) { %>
+    <div style="background:var(--canvas);border:0.5px solid var(--border-md);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:10px">Your Details</div>
+      <div class="field"><label>Full Name</label><input type="text" name="guest_name" required></div>
+      <div class="field"><label>Email</label><input type="email" name="guest_email" required></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>Company (optional)</label><input type="text" name="guest_company"></div>
+        <div class="field"><label>Phone (optional)</label><input type="text" name="guest_phone"></div>
+      </div>
+    </div>
+  <% } %>
+  <div class="field"><label>Project Title</label><input type="text" id="briefTitle" name="title" required placeholder="e.g. Product Launch — Full Brand Identity"></div>
+  <div class="field"><label>Category (for reference)</label>
+    <select name="category_ref" id="briefCategory">
+      <% categories.forEach(c => { %><option value="<%= c.slug %>"><%= c.name %></option><% }) %>
+    </select>
+  </div>
+  <div class="field"><label>Estimated Quantity / Scope</label><input type="number" id="briefQuantity" name="quantity" min="1" value="1"></div>
+  <div class="field"><label>Deadline</label><input type="date" name="deadline"></div>
+  <div class="field">
+    <label>Brief</label>
+    <textarea id="briefText" name="brief" required placeholder="Describe what you need, your brand context, and any references." style="min-height:130px"></textarea>
+    <button type="button" class="ai-assist-btn" id="aiAssistBtn">✨ AI Assist — structure this brief</button>
+    <div id="aiBriefSummary" class="ai-brief-summary" style="display:none"></div>
+  </div>
+  <input type="hidden" name="ai_brief_json" id="aiBriefJson">
+
+  <% if (deliveryMethods && deliveryMethods.length) { %>
+    <div style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-lt);margin-bottom:10px">Delivery (once ready)</div>
+    <div class="delivery-options">
+      <% deliveryMethods.forEach((m, i) => { %>
+        <label class="delivery-option<%= i===0 ? ' checked' : '' %>" data-delivery-option>
+          <div class="hd">
+            <input type="radio" name="delivery_method" value="<%= m.value %>" <%= i===0 ? 'checked' : '' %> data-cross-border="<%= m.value === 'cross_border_eac' %>">
+            <span><%= m.label %></span>
+          </div>
+          <div class="partners">Partners: <%= m.partners.join(', ') %></div>
+          <% if (m.value !== 'cross_border_eac' && m.partners.length > 1) { %>
+            <select class="delivery-partner-select" name="delivery_partner">
+              <% m.partners.forEach(p => { %><option value="<%= p %>"><%= p %></option><% }) %>
+            </select>
+          <% } %>
+        </label>
+      <% }) %>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Town / Area</label><input type="text" name="delivery_town" placeholder="e.g. Westlands, Nairobi"></div>
+      <div class="field"><label>Delivery Address (optional)</label><input type="text" name="delivery_address" placeholder="Building, street, landmark"></div>
+    </div>
+    <div id="crossBorderBox" class="cross-border-box" style="display:none">
+      <div style="font-weight:600;color:var(--ink);margin-bottom:8px">Cross-Border Destination</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>Destination Country</label>
+          <select name="delivery_country">
+            <% (eacCountries || []).filter(c => c.code !== 'KE').forEach(c => { %><option value="<%= c.code %>"><%= c.name %></option><% }) %>
+          </select>
+        </div>
+        <div class="field"><label>Partner</label>
+          <select name="delivery_partner">
+            <% (crossBorderPartners || []).forEach(p => { %><option value="<%= p %>"><%= p %></option><% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Approx. Parcel Weight (kg)</label><input type="number" name="parcel_weight_kg" value="1" min="0.1" step="0.1"></div>
+    </div>
+  <% } %>
+
+  <% if (canUseCredit) { %>
+    <div class="credit-terms-box">
+      <div style="font-weight:600;color:var(--ink);margin-bottom:8px">Payment Terms <span class="corporate-pill">Corporate Account</span></div>
+      <label class="opt"><input type="radio" name="payment_terms" value="due_on_delivery" checked> Pay on delivery via M-Pesa / regional mobile money</label>
+      <% [30,60,90].filter(d => d <= (creditTermsDays || 0)).forEach(d => { %>
+        <label class="opt"><input type="radio" name="payment_terms" value="net<%= d %>"> Net <%= d %> days — invoice against an LPO</label>
+      <% }) %>
+      <div id="lpoFields" style="display:none;margin-top:10px">
+        <div class="field"><label>LPO Number</label><input type="text" name="lpo_number" placeholder="e.g. LPO-2026-0451"></div>
+        <div class="field"><label>Upload LPO Document (optional)</label><input type="file" name="lpo_document"></div>
+      </div>
+    </div>
+  <% } %>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" type="submit" style="flex:1">Submit Brief →</button>
+    <a class="wa-cta-outline" href="#" id="waBriefLink" target="_blank" rel="noopener">
+      <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16.02 3C9.4 3 4 8.36 4 15c0 2.34.64 4.53 1.75 6.4L3 29l7.8-2.68A11.9 11.9 0 0 0 16.02 27C22.63 27 28 21.64 28 15S22.63 3 16.02 3Z"/></svg>
+      Discuss on WhatsApp instead
+    </a>
+  </div>
+</form>
+
+<script>
+  document.querySelectorAll('[data-delivery-option]').forEach(function (label) {
+    label.querySelector('input').addEventListener('change', function () {
+      document.querySelectorAll('[data-delivery-option]').forEach(function (l) { l.classList.remove('checked'); });
+      label.classList.add('checked');
+      var crossBorderBox = document.getElementById('crossBorderBox');
+      if (crossBorderBox) crossBorderBox.style.display = this.dataset.crossBorder === 'true' ? 'block' : 'none';
+    });
+  });
+  document.querySelectorAll('input[name="payment_terms"]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var lpoFields = document.getElementById('lpoFields');
+      if (lpoFields) lpoFields.style.display = this.value === 'due_on_delivery' ? 'none' : 'block';
+    });
+  });
+
+  // "Discuss on WhatsApp" builds the deep link from whatever's currently
+  // typed — no server round-trip needed since the content is live in the form.
+  var waLink = document.getElementById('waBriefLink');
+  if (waLink) {
+    waLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      var title = document.getElementById('briefTitle').value || '(untitled project)';
+      var brief = document.getElementById('briefText').value || '(no details yet)';
+      var msg = "Hi TrioCraft! I have a custom project brief:\n\nProject: " + title + "\n\n" + brief + "\n\nCould we discuss quantity, pricing, and timeline?";
+      window.open('https://wa.me/<%= site.whatsappNumber %>?text=' + encodeURIComponent(msg), '_blank');
+    });
+  }
+
+  // AI Assist — sends the current brief text to the server for structuring
+  // (real Claude API call if configured, heuristic fallback otherwise — see
+  // lib/ai-brief.js) and fills in category/quantity + shows a summary panel.
+  var aiBtn = document.getElementById('aiAssistBtn');
+  if (aiBtn) {
+    aiBtn.addEventListener('click', async function () {
+      var briefText = document.getElementById('briefText').value;
+      if (!briefText || !briefText.trim()) { alert('Write a few words in the Brief field first.'); return; }
+      aiBtn.disabled = true;
+      aiBtn.textContent = '✨ Structuring…';
+      try {
+        var res = await fetch('/marketplace/custom-brief/ai-assist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: briefText }),
+        });
+        var data = await res.json();
+        document.getElementById('aiBriefJson').value = JSON.stringify(data);
+
+        if (data.suggestedCategorySlug) {
+          var catSelect = document.getElementById('briefCategory');
+          for (var i = 0; i < catSelect.options.length; i++) {
+            if (catSelect.options[i].value === data.suggestedCategorySlug) catSelect.selectedIndex = i;
+          }
+        }
+        if (data.quantityGuess) document.getElementById('briefQuantity').value = data.quantityGuess;
+
+        var summaryEl = document.getElementById('aiBriefSummary');
+        var lines = '<span class="tag">' + (data.method === 'ai' ? 'AI-Structured' : 'Heuristic') + '</span>';
+        if (data.dimensions) lines += '<div><strong>Dimensions:</strong> ' + data.dimensions + '</div>';
+        lines += '<div><strong>Colour mode:</strong> ' + (data.colorMode || '—') + '</div>';
+        if (data.keyElements && data.keyElements.length) lines += '<div><strong>Key elements:</strong> ' + data.keyElements.join(', ') + '</div>';
+        if (data.placementNotes && data.placementNotes.length) lines += '<ul>' + data.placementNotes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>';
+        summaryEl.innerHTML = lines;
+        summaryEl.style.display = 'block';
+      } catch (err) {
+        alert('AI Assist is unavailable right now — you can still fill in the form manually.');
+      } finally {
+        aiBtn.disabled = false;
+        aiBtn.textContent = '✨ AI Assist — structure this brief';
+      }
+    });
+  }
+</script>

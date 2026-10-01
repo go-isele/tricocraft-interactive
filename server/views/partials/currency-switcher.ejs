@@ -1,0 +1,8 @@
+<form method="POST" action="/marketplace/currency" class="currency-switcher">
+  <input type="hidden" name="return_to" value="<%= path %>">
+  <select name="currency" onchange="this.form.submit()">
+    <% fx.SUPPORTED_CURRENCIES.forEach(c => { %>
+      <option value="<%= c.code %>" <%= currency===c.code?'selected':'' %>><%= c.code %></option>
+    <% }) %>
+  </select>
+</form>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'vendor', dashActive: 'orders' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>Assigned Orders</h1><p>Orders TrioCraft has routed to your production line.</p></div></div>
+
+      <% if (providers && providers.length) { %>
+        <div class="card">
+          <h3>Your Production Line</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <% providers.forEach(p => { %>
+              <div class="pe-chip" style="font-size:12.5px;padding:6px 14px">
+                <strong><%= p.name %></strong><% if (p.specialty) { %> · <%= p.specialty %><% } %> · <%= p.turnaround_days %>d turnaround
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (!orders.length) { %>
+        <div class="empty-state"><div class="ico">🏭</div><p>No orders assigned yet.</p></div>
+      <% } else { %>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order</th><th>Client</th><th>Qty</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <% orders.forEach(o => { %>
+                  <tr>
+                    <td><%= o.title %></td>
+                    <td><%= o.client_name %></td>
+                    <td><%= o.quantity %></td>
+                    <td><span class="badge badge-<%= o.status %>"><%= STATUS_LABELS[o.status] %></span></td>
+                    <td><a class="btn btn-outline btn-sm" href="/vendor/orders/<%= o.id %>">View</a></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head', { metaDescription }) %></head>
+<body>
+<%- include('partials/site-header') %>
+
+<section class="hero" style="padding:56px 0 40px">
+  <div class="container">
+    <div class="eyebrow">⬡ Graphic Design &amp; Creative</div>
+    <h1 style="font-size:38px">Every brand decision starts on this page.</h1>
+    <p class="lede">Logo & identity, brand guidelines, illustration, social content, and packaging/print design — designed in-house, then handed straight into TrioCraft's own production lines when it's ready to go physical.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px">
+      <a class="btn btn-primary" href="/marketplace?category=graphic-design-creative">Browse Design Catalogue →</a>
+      <a class="btn btn-outline" href="/marketplace/custom-brief">Submit a Custom Brief</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-hd">
+      <div class="eyebrow">What We Design</div>
+      <h2>Six sub-services, one accountable design team</h2>
+      <p>Each of these is quotable directly through the catalogue where a matching product exists, or through a Custom Brief for a bespoke scope.</p>
+    </div>
+    <div class="svc-grid">
+      <% page.subServices.forEach(s => { %>
+        <% const prod = s.productSlug ? productsBySlug[s.productSlug] : null; %>
+        <div class="svc-card">
+          <div class="ico"><%= s.icon %></div>
+          <h3><%= s.title %></h3>
+          <p><%= s.body %></p>
+          <% if (prod) { %>
+            <a href="/marketplace/product/<%= prod.slug %>" style="display:inline-block;margin-top:12px;font-size:13px;font-weight:600;color:var(--rust)">From <%= fx.formatAmount(prod.base_price, currency) %> →</a>
+          <% } else { %>
+            <a href="/marketplace/custom-brief" style="display:inline-block;margin-top:12px;font-size:13px;font-weight:600;color:var(--slate-lt)">Quote via Custom Brief →</a>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--white);border-top:0.5px solid var(--border-md);border-bottom:0.5px solid var(--border-md)">
+  <div class="container">
+    <div class="section-hd">
+      <div class="eyebrow">How A Design Engagement Runs</div>
+      <h2>A six-step design process — distinct from our production methodology</h2>
+      <p>Physical production (print, apparel, signage) follows TrioCraft's site-wide six-step methodology on the <a href="/services" style="color:var(--rust);font-weight:600">Capability Statement</a>. A design engagement runs its own process first, ending in a handover into that same production pipeline.</p>
+    </div>
+    <div class="steps method-steps">
+      <% page.process.forEach((s, i) => { %>
+        <div class="step"><div class="num"><%= i + 1 %></div><h4><%= s.title %></h4><p><%= s.body %></p></div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:40px;align-items:start">
+    <div>
+      <h2 style="font-size:22px;margin-bottom:14px">What You Actually Receive</h2>
+      <ul class="check-list">
+        <% page.deliverables.forEach(d => { %><li><%= d %></li><% }) %>
+      </ul>
+    </div>
+    <% if (caseStudy) { %>
+    <div class="work-card">
+      <div class="thumb"><% if (caseStudy.image) { %><img src="<%= caseStudy.image %>" alt="<%= caseStudy.title %>"><% } else { %><%= caseStudy.icon %><% } %></div>
+      <div class="body">
+        <div class="loc">Case Study · <%= caseStudy.location %></div>
+        <h4><%= caseStudy.title %></h4>
+        <p><%= caseStudy.description %></p>
+        <a href="/work" style="display:inline-block;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--rust)">See more of our work →</a>
+      </div>
+    </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="section" style="background:var(--white);border-top:0.5px solid var(--border-md);border-bottom:0.5px solid var(--border-md)">
+  <div class="container" style="max-width:820px">
+    <div class="section-hd">
+      <div class="eyebrow">Frequently Asked</div>
+      <h2>Design engagement FAQ</h2>
+    </div>
+    <div class="cap-grid">
+      <% page.faqs.forEach(f => { %>
+        <details class="cap-card">
+          <summary>
+            <span class="cap-title"><%= f.q %></span>
+            <span class="cap-toggle">＋</span>
+          </summary>
+          <div class="cap-body">
+            <p><%= f.a %></p>
+          </div>
+        </details>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="max-width:760px">
+    <div class="cta-band">
+      <h3>Have a brief? Let's design it right the first time.</h3>
+      <p>Tell us what you need — a logo, a full identity, or a single social content pack — and we'll scope it against this process.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:22px">
+        <a class="btn btn-primary" href="/marketplace/custom-brief">Submit a Custom Brief →</a>
+        <a class="btn btn-outline" style="border-color:rgba(255,255,255,.3);color:#fff" href="<%= site.whatsappLink %>" target="_blank" rel="noopener">Discuss on WhatsApp</a>
+      </div>
+      <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.9">
+        📞 <%= site.phoneDisplay %> &nbsp;·&nbsp; ✉ <%= site.email %> &nbsp;·&nbsp; <%= site.address %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/site-footer') %>
+<%- include('partials/whatsapp-float') %>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<% if (currentUser) { %>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'client', dashActive: 'cart' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>Cart</h1><p>Review your items before submitting to the Production Marketplace.</p></div></div>
+      <%- include('../partials/cart-body', {
+        items, total, currentUser, deliveryMethods, eacCountries, crossBorderPartners, canUseCredit, creditTermsDays, waLink,
+        guestError: typeof guestError !== 'undefined' ? guestError : null,
+      }) %>
+    </div>
+  </div>
+</div>
+<% } else { %>
+<%- include('../partials/site-header') %>
+<div class="public-shell">
+  <div class="public-hd"><h1>Cart</h1><p>Review your items — no account needed to request a quote.</p></div>
+  <%- include('../partials/cart-body', {
+    items, total, currentUser, deliveryMethods, eacCountries, crossBorderPartners, canUseCredit, creditTermsDays, waLink,
+    guestError: typeof guestError !== 'undefined' ? guestError : null,
+  }) %>
+</div>
+<%- include('../partials/site-footer') %>
+<%- include('../partials/whatsapp-float') %>
+<% } %>
+</body>
+</html>

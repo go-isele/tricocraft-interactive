@@ -1,0 +1,32 @@
+[Unit]
+Description=TrioCraft API (Express)
+After=network.target
+
+[Service]
+Type=simple
+User=triocraft
+Group=triocraft
+
+# ── Replace /var/www/triocraft with wherever this repo actually lives. ──
+WorkingDirectory=/var/www/triocraft/server
+
+# Confirm this path with `which node` on the server — it differs if Node
+# was installed via nvm instead of a system package (e.g. NodeSource/apt).
+ExecStart=/usr/bin/node server.js
+
+Environment=NODE_ENV=production
+# server/.env is loaded by the app itself via the `dotenv` package
+# (see server/server.js) — it is NOT passed through systemd's
+# EnvironmentFile, because one of its values (SMTP_FROM) contains a quoted
+# display name + angle brackets that systemd's env-file parser mishandles.
+
+Restart=always
+RestartSec=5
+
+# Light hardening — safe defaults for a plain Node/Express app that only
+# needs to read/write its own working directory (db/, uploads/).
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

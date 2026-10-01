@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'admin', dashActive: 'blog' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd">
+        <div><h1>Resources / Blog</h1><p>Manage what's published under /resources.</p></div>
+        <a class="btn btn-primary" href="/admin/blog/new">+ New Post</a>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Title</th><th>Slug</th><th>Published</th><th></th></tr></thead>
+            <tbody>
+              <% posts.forEach(p => { %>
+                <tr>
+                  <td><%= p.title %></td>
+                  <td><code>/resources/<%= p.slug %></code></td>
+                  <td><%= new Date(p.published_at).toLocaleDateString('en-KE') %></td>
+                  <td>
+                    <a class="btn btn-outline btn-sm" href="/admin/blog/<%= p.id %>/edit">Edit</a>
+                    <a class="btn btn-outline btn-sm" href="/resources/<%= p.slug %>" target="_blank">View</a>
+                    <form method="POST" action="/admin/blog/<%= p.id %>/delete" style="display:inline" onsubmit="return confirm('Delete this post permanently?')">
+                      <button class="btn btn-outline btn-sm" type="submit">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

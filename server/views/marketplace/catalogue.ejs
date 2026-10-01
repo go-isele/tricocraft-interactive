@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<% if (currentUser) { %>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'client', dashActive: 'catalogue' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd">
+        <div><h1>Product Catalogue</h1><p>Browse TrioCraft's vetted categories. Pick a product to see providers, pricing, and place an order.</p></div>
+      </div>
+      <%- include('../partials/catalogue-body', { categories, products, activeCat }) %>
+    </div>
+  </div>
+</div>
+<% } else { %>
+<%- include('../partials/site-header') %>
+<div class="public-shell">
+  <div class="public-hd">
+    <h1>Product Catalogue</h1>
+    <p>Browse and request a quote — no account required. <a href="/register" style="color:var(--rust);font-weight:600">Create an account</a> to track orders directly.</p>
+  </div>
+  <%- include('../partials/catalogue-body', { categories, products, activeCat }) %>
+</div>
+<%- include('../partials/site-footer') %>
+<%- include('../partials/whatsapp-float') %>
+<% } %>
+</body>
+</html>

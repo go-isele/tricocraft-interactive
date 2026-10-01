@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'admin', dashActive: 'clients' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>Corporate Accounts</h1><p>Verify clients for Net 30/60/90 LPO checkout and record their KRA PIN for e-TIMS invoicing.</p></div></div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Client</th><th>Account Settings</th></tr></thead>
+            <tbody>
+              <% clients.forEach(c => { %>
+                <tr>
+                  <td><%= c.company || c.name %><div style="font-size:11px;color:var(--slate-lt)"><%= c.email %></div></td>
+                  <td>
+                    <form method="POST" action="/admin/clients/<%= c.id %>/update" class="pe-inline-form">
+                      <select name="account_type">
+                        <option value="retail" <%= c.account_type==='retail'?'selected':'' %>>Retail</option>
+                        <option value="corporate" <%= c.account_type==='corporate'?'selected':'' %>>Corporate</option>
+                      </select>
+                      <label style="font-size:11.5px;color:var(--slate-lt);display:flex;align-items:center;gap:4px">
+                        <input type="checkbox" name="corporate_verified" value="1" style="width:auto" <%= c.corporate_verified?'checked':'' %>> Verified
+                      </label>
+                      <select name="credit_terms_days">
+                        <option value="">No credit</option>
+                        <option value="30" <%= c.credit_terms_days===30?'selected':'' %>>Net 30</option>
+                        <option value="60" <%= c.credit_terms_days===60?'selected':'' %>>Net 60</option>
+                        <option value="90" <%= c.credit_terms_days===90?'selected':'' %>>Net 90</option>
+                      </select>
+                      <input type="text" name="kra_pin" value="<%= c.kra_pin || '' %>" placeholder="KRA PIN" style="width:140px">
+                      <button class="btn btn-dark btn-sm" type="submit">Save</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

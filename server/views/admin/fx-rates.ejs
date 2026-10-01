@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'admin', dashActive: 'fx' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>FX Rates</h1><p>Display-only exchange rates for the EAC currency switcher — KES stays the one transaction currency. These are NOT a live feed; update them from a source your finance team trusts.</p></div></div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Currency</th><th>1 unit = ? KES</th><th>Last Updated</th><th></th></tr></thead>
+            <tbody>
+              <% supported.filter(c => c.code !== 'KES').forEach(c => { %>
+                <% const row = rates.find(r => r.currency_code === c.code); %>
+                <tr>
+                  <td><%= c.code %> — <%= c.name %></td>
+                  <td colspan="3">
+                    <form method="POST" action="/admin/fx-rates/update" class="pe-inline-form">
+                      <input type="hidden" name="currency_code" value="<%= c.code %>">
+                      <input type="number" step="0.0001" name="kes_per_unit" value="<%= row ? row.kes_per_unit : '' %>" style="width:120px" required>
+                      <span style="font-size:11.5px;color:var(--slate-lt)"><%= row ? new Date(row.updated_at).toLocaleString('en-KE') : 'not set' %></span>
+                      <button class="btn btn-dark btn-sm" type="submit">Update</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('../partials/head') %></head>
+<body>
+<div class="dash">
+  <%- include('../partials/dash-sidebar', { dashRole: 'client', dashActive: 'orders' }) %>
+  <div class="dash-main">
+    <%- include('../partials/dash-topbar') %>
+    <div class="dash-content">
+      <div class="dash-hd"><div><h1>My Orders</h1><p>Track every order from submission to delivery.</p></div></div>
+
+      <% if (created) { %>
+        <div class="form-success">Order(s) submitted — TrioCraft will confirm quotation and provider shortly.</div>
+      <% } %>
+
+      <div class="card">
+        <h3>Active Orders (<%= active.length %>)</h3>
+        <% if (!active.length) { %>
+          <div class="empty-state"><div class="ico">📦</div><p>No active orders right now.</p></div>
+        <% } else { %>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order</th><th>Qty</th><th>Provider</th><th>Status</th><th>Progress</th><th></th></tr></thead>
+              <tbody>
+              <% active.forEach(o => { %>
+                <tr>
+                  <td><%= o.title %></td>
+                  <td><%= o.quantity %></td>
+                  <td><%= o.provider_name || '—' %></td>
+                  <td><span class="badge badge-<%= o.status %>"><%= STATUS_LABELS[o.status] || o.status %></span></td>
+                  <td style="width:120px"><div class="progress-bar"><div style="width:<%= o.progress %>%"></div></div></td>
+                  <td><a class="btn btn-outline btn-sm" href="/marketplace/orders/<%= o.id %>">View</a></td>
+                </tr>
+              <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <h3>Order History (<%= history.length %>)</h3>
+        <% if (!history.length) { %>
+          <div class="empty-state"><div class="ico">◎</div><p>Completed orders will show up here.</p></div>
+        <% } else { %>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order</th><th>Qty</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+              <% history.forEach(o => { %>
+                <tr>
+                  <td><%= o.title %></td><td><%= o.quantity %></td>
+                  <td><span class="badge badge-<%= o.status %>"><%= STATUS_LABELS[o.status] || o.status %></span></td>
+                  <td><a class="btn btn-outline btn-sm" href="/marketplace/orders/<%= o.id %>">View</a></td>
+                </tr>
+              <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

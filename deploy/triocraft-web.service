@@ -1,0 +1,31 @@
+[Unit]
+Description=TrioCraft Frontend (Next.js)
+After=network.target triocraft-api.service
+Wants=triocraft-api.service
+
+[Service]
+Type=simple
+User=triocraft
+Group=triocraft
+
+# ── Replace /var/www/triocraft with wherever this repo actually lives. ──
+WorkingDirectory=/var/www/triocraft/web
+
+# Calls the locally-installed `next` binary directly (faster + more
+# reliable than `npx next start`, which has to resolve npx itself first).
+ExecStart=/var/www/triocraft/web/node_modules/.bin/next start -p 3000
+
+Environment=NODE_ENV=production
+# Next.js reads web/.env.production.local itself at runtime for
+# INTERNAL_API_URL (and had already inlined NEXT_PUBLIC_API_URL into the
+# client bundle at build time) — see web/lib/api.js and README-DEPLOY.md.
+# No EnvironmentFile needed here.
+
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

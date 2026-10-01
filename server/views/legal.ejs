@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head') %></head>
+<body>
+<%- include('partials/site-header') %>
+<main class="article-wrap">
+  <h1 class="article-title" style="font-size:34px"><%= heading %></h1>
+  <% if (isPlaceholder) { %>
+    <div class="form-error" style="margin-bottom:24px">This page is a placeholder. Replace this content with your reviewed <%= heading.toLowerCase() %> before relying on it publicly.</div>
+  <% } %>
+  <div class="article-body">
+    <p>TrioCraft Brands Ltd ("TrioCraft", "we", "us") respects your privacy and is committed to protecting any information you share with us through this website and the Production Marketplace.</p>
+    <p>Add your finalised <%= heading.toLowerCase() %> text here — what data is collected (contact form, brand vault uploads, order details), how it's used, how long it's retained, and how a client can request deletion or export.</p>
+  </div>
+</main>
+<%- include('partials/site-footer') %>
+<%- include('partials/whatsapp-float') %>
+</body>
+</html>

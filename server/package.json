@@ -1,0 +1,27 @@
+{
+  "name": "triocraft-server",
+  "version": "2.0.0",
+  "description": "TrioCraft Brands Ltd — JSON API backend (marketplace, brand vault, orders, provider network, admin/vendor dashboards). Consumed by the Next.js frontend in ../web.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node db/seed.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "connect-sqlite3": "^0.9.15",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "image-size": "^1.2.1",
+    "multer": "^2.0.0",
+    "nodemailer": "^6.9.15",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
+  }
+}

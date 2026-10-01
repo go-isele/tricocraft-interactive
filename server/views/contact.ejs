@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head') %></head>
+<body>
+<%- include('partials/site-header') %>
+
+<div class="contact-grid">
+  <div class="contact-info">
+    <div class="eyebrow" style="margin-bottom:14px">⬡ Get in Touch</div>
+    <h2>Let's talk about your space, event, or brand.</h2>
+    <p style="color:var(--slate-lt);font-size:14px;margin-bottom:24px">We typically reply within one business day.</p>
+
+    <div class="contact-line"><span class="ico">📍</span><span><%= site.address %></span></div>
+    <div class="contact-line"><span class="ico">📞</span><span><a href="tel:<%= site.phonePrimaryTel %>"><%= site.phoneDisplay %></a></span></div>
+    <div class="contact-line"><span class="ico">✉</span><span><a href="mailto:<%= site.email %>"><%= site.email %></a></span></div>
+    <div class="contact-line"><span class="ico">🕑</span><span><%= site.hours %></span></div>
+
+    <a class="wa-cta" href="<%= site.whatsappLink %>" target="_blank" rel="noopener">💬 Chat with us on WhatsApp</a>
+
+    <div style="display:flex;gap:16px;margin:18px 0 4px">
+      <a href="<%= site.social.instagram %>" target="_blank" rel="noopener" style="color:var(--slate);font-weight:600;font-size:13px">Instagram</a>
+      <a href="<%= site.social.facebook %>" target="_blank" rel="noopener" style="color:var(--slate);font-weight:600;font-size:13px">Facebook</a>
+      <a href="<%= site.social.tiktok %>" target="_blank" rel="noopener" style="color:var(--slate);font-weight:600;font-size:13px">TikTok</a>
+    </div>
+
+    <div class="map-embed">
+      <iframe src="<%= site.mapsEmbedSrc %>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="TrioCraft location — Emperor Plaza, Koinange Street, Nairobi"></iframe>
+    </div>
+  </div>
+
+  <div class="form-card" style="margin:0">
+    <h2>Send a Message</h2>
+    <p class="sub">Tell us what you'd like branded — we'll follow up directly.</p>
+
+    <% if (sent) { %>
+      <div class="form-success">Thanks — your message has been received. We'll be in touch shortly.</div>
+    <% } %>
+    <% if (error) { %>
+      <div class="form-error"><%= error %></div>
+    <% } %>
+
+    <form method="POST" action="/contact">
+      <div class="field"><label>Full Name</label><input type="text" name="name" required></div>
+      <div class="field"><label>Email</label><input type="email" name="email" required></div>
+      <div class="field"><label>Company / Organisation</label><input type="text" name="company"></div>
+      <div class="field"><label>Message</label><textarea name="message" required placeholder="What would you like branded?"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Send Message</button>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/site-footer') %>
+<%- include('partials/whatsapp-float') %>
+</body>
+</html>

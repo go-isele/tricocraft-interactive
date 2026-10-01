@@ -1,0 +1,33 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= typeof title !== 'undefined' ? title : 'TrioCraft Brands Ltd' %></title>
+<%
+  const _desc = typeof metaDescription !== 'undefined' && metaDescription
+    ? metaDescription
+    : 'TrioCraft Brands Ltd — transforming physical spaces into immersive brand experiences. Nairobi-based branding, printing, design, and marketing solutions.';
+  const _ogImage = typeof ogImage !== 'undefined' && ogImage ? ogImage : '/static/img/og-default.svg';
+  const _url = typeof canonicalUrl !== 'undefined' ? canonicalUrl : '';
+%>
+<meta name="description" content="<%= _desc %>">
+
+<link rel="icon" type="image/svg+xml" href="/static/img/triocraft-icon.svg">
+<link rel="alternate icon" href="/static/img/triocraft-icon.png">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TrioCraft Brands Ltd">
+<meta property="og:title" content="<%= typeof title !== 'undefined' ? title : 'TrioCraft Brands Ltd' %>">
+<meta property="og:description" content="<%= _desc %>">
+<meta property="og:image" content="<%= _ogImage %>">
+<% if (_url) { %><meta property="og:url" content="<%= _url %>"><% } %>
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= typeof title !== 'undefined' ? title : 'TrioCraft Brands Ltd' %>">
+<meta name="twitter:description" content="<%= _desc %>">
+<meta name="twitter:image" content="<%= _ogImage %>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/styles.css">

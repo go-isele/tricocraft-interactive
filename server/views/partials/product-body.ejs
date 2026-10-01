@@ -1,0 +1,175 @@
+<%
+  // v5/v6 — which silhouette the live mockup editor draws for this product
+  // (public/js/mockup-editor.js draws these with plain canvas primitives, so
+  // every product gets a working editor with zero extra template art
+  // needed). Checked in order: an exact per-product override first (for
+  // products whose category is shared by visually-different items — e.g.
+  // a roll-up stand vs. a wall-branding job both live under "Large Format &
+  // Environmental Branding"), falling back to a per-category default.
+  const SILHOUETTE_BY_PRODUCT = {
+    'roll-up-banner': 'rollup',
+    'vehicle-door-decals': 'vehicle',
+    'executive-notebook-pen-set': 'notebook',
+  };
+  const SILHOUETTE_BY_CATEGORY = {
+    'apparel-wearable-branding': 'apparel',
+    'print-marketing-materials': 'card',
+    'promotional-merchandise': 'mug',
+    'large-format-environmental': 'banner',
+    'vehicle-branding': 'vehicle',
+  };
+  const silhouetteKind = SILHOUETTE_BY_PRODUCT[product.slug] || SILHOUETTE_BY_CATEGORY[product.category_slug] || 'generic';
+%>
+  <div>
+    <div class="product-hero mockup-editor" data-silhouette="<%= silhouetteKind %>" data-hidden-field="mockupDataField" data-form="addToCartForm" data-photo="<%= product.image || '' %>">
+      <% if (product.image) { %>
+        <img src="<%= product.image %>" alt="<%= product.name %>" class="mockup-empty">
+      <% } else { %>
+        <div class="mockup-empty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--slate-xs)">▢</div>
+      <% } %>
+      <canvas class="mockup-canvas"></canvas>
+    </div>
+    <div class="mockup-controls">
+      <label class="mockup-upload-btn">
+        📤 Upload your logo to preview it on this product
+        <input type="file" accept="image/png,image/svg+xml">
+      </label>
+      <div class="mockup-controls-row">
+        <label>Size <input type="range" class="mockup-scale" min="30" max="150" value="100"></label>
+        <label><input type="checkbox" class="mockup-bleed-toggle" checked> Bleed / safe margin</label>
+        <button type="button" class="mockup-reset btn btn-outline btn-sm">Remove</button>
+      </div>
+    </div>
+    <p style="color:var(--slate-lt);font-size:11.5px;margin-top:8px">Live placement preview only — not a colour-accurate proof (screen colours are sRGB, not the job's print CMYK). Uses the same 3mm bleed / safe-margin guidance as Brand Vault pre-flight checks.</p>
+  </div>
+
+  <div>
+    <h1 style="font-size:30px;margin-bottom:8px"><%= product.name %></h1>
+    <p style="color:var(--slate-lt);margin-bottom:18px"><%= product.description %></p>
+    <div style="font-family:var(--display);font-size:30px;color:var(--rust);margin-bottom:4px">
+      <%= fx.formatAmount(product.base_price, currency) %> <span style="font-size:14px;color:var(--slate-lt);font-family:var(--body)">/ unit (base)</span>
+      <% if (currency !== 'KES') { %><div style="font-size:12px;color:var(--slate-lt);font-family:var(--body)">KES <%= product.base_price.toLocaleString() %> — orders are transacted in KES</div><% } %>
+    </div>
+    <div style="font-size:12.5px;color:var(--slate-lt);margin-bottom:24px">Minimum order quantity: <%= product.min_quantity %></div>
+
+    <div class="card">
+      <h3>Step 1 · Provider</h3>
+      <% if (!providers.length) { %>
+        <p style="color:var(--slate-lt);font-size:13px">Auto-assigned by TrioCraft based on capacity — no action needed.</p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Provider</th><th>Specialty</th><th>Turnaround</th><th>Rating</th></tr></thead>
+            <tbody>
+            <% providers.forEach(pv => { %>
+              <tr>
+                <td><%= pv.name %> <% if (pv.vetted) { %><span class="badge badge-completed">Vetted</span><% } %></td>
+                <td><%= pv.specialty || '—' %></td>
+                <td><%= pv.turnaround_days %> days</td>
+                <td>★ <%= pv.rating %></td>
+              </tr>
+            <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (pricing && pricing.tiers && pricing.tiers.length) { %>
+      <div class="card">
+        <h3>Volume Pricing</h3>
+        <div class="table-wrap">
+          <table class="tier-table">
+            <thead><tr><th>Quantity</th><th>Unit Price (KES)</th></tr></thead>
+            <tbody>
+              <% pricing.tiers.forEach(t => { %>
+                <tr><td><%= t.min_qty %><%= t.max_qty ? '–' + t.max_qty : '+' %> units</td><td>KES <%= t.unit_price.toLocaleString() %></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="tier-note">The best-matching tier for your quantity is applied automatically.</div>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <h3>Step 2 · <%= currentUser ? 'Configure &amp; Add to Order' : 'Request a Quote' %></h3>
+      <% if (!currentUser) { %>
+        <p style="font-size:12.5px;color:var(--slate-lt);margin-bottom:14px">No account needed — add it to your cart, then give us your details at checkout and we'll follow up with pricing and lead time.</p>
+      <% } %>
+
+      <div class="price-estimate" id="priceEstimate">
+        <div><div class="lbl">Estimated Total</div><div class="amt" id="peTotal">KES <%= product.base_price.toLocaleString() %></div></div>
+        <div class="per-unit" id="peUnit">KES <%= product.base_price.toLocaleString() %> / unit</div>
+      </div>
+
+      <form method="POST" action="/marketplace/cart/add" id="addToCartForm">
+        <input type="hidden" name="productId" value="<%= product.id %>">
+        <input type="hidden" name="mockup_data" id="mockupDataField" value="">
+
+        <% if (pricing && pricing.options && pricing.options.length) { %>
+          <% pricing.options.forEach(opt => { %>
+            <div class="opt-group" data-option-id="<%= opt.id %>">
+              <div class="opt-group-lbl"><%= opt.name %></div>
+              <div class="opt-values">
+                <% opt.values.forEach((v, i) => { %>
+                  <label class="opt-value<%= (v.is_default || (!opt.values.some(x=>x.is_default) && i===0)) ? ' checked' : '' %>">
+                    <input type="radio" name="opt_<%= opt.id %>" value="<%= v.id %>" data-delta="<%= v.price_delta %>"
+                      <%= (v.is_default || (!opt.values.some(x=>x.is_default) && i===0)) ? 'checked' : '' %>>
+                    <span><%= v.label %></span>
+                    <% if (v.price_delta) { %><span class="delta"><%= v.price_delta > 0 ? '+' : '' %>KES <%= v.price_delta.toLocaleString() %></span><% } %>
+                  </label>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+        <% } %>
+
+        <div class="field"><label>Quantity</label><input type="number" name="quantity" id="qtyInput" min="<%= product.min_quantity %>" value="<%= product.min_quantity %>" required></div>
+        <div class="field"><label>Brief / customisation notes (optional)</label><textarea name="brief" placeholder="Colours, placement, deadline, anything the design team should know"></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit"><%= currentUser ? 'Add to Cart →' : 'Request Quote →' %></button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Client-side estimate only — the server (lib/pricing.js) is the
+  // authoritative source of truth and recomputes from the DB on submit,
+  // so nothing here can be trusted or forged into an actual order price.
+  var basePrice = <%= product.base_price %>;
+  var tiers = <%- JSON.stringify((pricing && pricing.tiers) || []) %>;
+  var form = document.getElementById('addToCartForm');
+  var qtyInput = document.getElementById('qtyInput');
+  var totalEl = document.getElementById('peTotal');
+  var unitEl = document.getElementById('peUnit');
+  if (!form || !qtyInput) return;
+
+  function tierUnitPrice(qty) {
+    var matches = tiers.filter(function (t) { return qty >= t.min_qty && (t.max_qty == null || qty <= t.max_qty); });
+    if (!matches.length) return basePrice;
+    matches.sort(function (a, b) { return b.min_qty - a.min_qty; });
+    return matches[0].unit_price;
+  }
+
+  function recompute() {
+    var qty = Math.max(1, Number(qtyInput.value) || 1);
+    var unit = tierUnitPrice(qty);
+    var radios = form.querySelectorAll('input[type=radio]:checked');
+    radios.forEach(function (r) { unit += Number(r.dataset.delta || 0); });
+    unitEl.textContent = 'KES ' + unit.toLocaleString() + ' / unit';
+    totalEl.textContent = 'KES ' + (unit * qty).toLocaleString();
+
+    form.querySelectorAll('.opt-value').forEach(function (label) {
+      var input = label.querySelector('input');
+      label.classList.toggle('checked', input && input.checked);
+    });
+  }
+
+  form.addEventListener('change', recompute);
+  qtyInput.addEventListener('input', recompute);
+  recompute();
+})();
+</script>
+<script src="/static/js/mockup-editor.js"></script>

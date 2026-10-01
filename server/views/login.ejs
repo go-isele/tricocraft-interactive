@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><%- include('partials/head') %></head>
+<body>
+<%- include('partials/site-header') %>
+
+<div class="form-card">
+  <h2>Log In</h2>
+  <p class="sub">Access your Production Marketplace dashboard.</p>
+  <% if (error) { %><div class="form-error"><%= error %></div><% } %>
+  <form method="POST" action="/login">
+    <input type="hidden" name="next" value="<%= next %>">
+    <div class="field"><label>Email</label><input type="email" name="email" required autofocus></div>
+    <div class="field"><label>Password</label><input type="password" name="password" required></div>
+    <button class="btn btn-primary btn-block" type="submit">Log In</button>
+  </form>
+  <div class="form-note">New here? <a href="/register" style="color:var(--rust);font-weight:600">Create an account</a></div>
+</div>
+
+<%- include('partials/site-footer') %>
+<%- include('partials/whatsapp-float') %>
+</body>
+</html>

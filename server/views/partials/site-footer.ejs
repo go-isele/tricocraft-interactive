@@ -1,0 +1,57 @@
+<footer class="site-ftr">
+  <div class="container">
+    <div class="row">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="/static/img/triocraft-icon.svg" class="brand-mark" alt="TrioCraft">
+          <div class="brand-name">TrioCraft</div>
+        </div>
+        <div class="tagline">"Crafting Dreams, Forged in Brotherhood."</div>
+        <p style="font-size:13px;max-width:280px;color:rgba(255,255,255,.55);margin-bottom:14px">Transforming physical spaces into immersive brand experiences — Nairobi-based, delivered through a curated production network.</p>
+        <p style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.9">
+          📍 <%= site.address %><br>
+          📞 <a href="tel:<%= site.phonePrimaryTel %>" style="color:inherit"><%= site.phoneDisplay %></a><br>
+          ✉ <a href="mailto:<%= site.email %>" style="color:inherit"><%= site.email %></a><br>
+          <a href="<%= site.whatsappLink %>" target="_blank" rel="noopener" style="color:#25D366;font-weight:600">💬 Chat on WhatsApp</a>
+        </p>
+        <div style="display:flex;gap:12px;margin-top:14px">
+          <a href="<%= site.social.instagram %>" target="_blank" rel="noopener" aria-label="Instagram" style="color:rgba(255,255,255,.7)">Instagram</a>
+          <a href="<%= site.social.facebook %>" target="_blank" rel="noopener" aria-label="Facebook" style="color:rgba(255,255,255,.7)">Facebook</a>
+          <a href="<%= site.social.tiktok %>" target="_blank" rel="noopener" aria-label="TikTok" style="color:rgba(255,255,255,.7)">TikTok</a>
+        </div>
+      </div>
+      <div>
+        <h4>Services</h4>
+        <ul>
+          <li><a href="/services/graphic-design-creative">Graphic Design & Creative</a></li>
+          <li><a href="/marketplace?category=apparel-wearable-branding">Apparel & Wearable Branding</a></li>
+          <li><a href="/marketplace?category=large-format-environmental">Large Format & Environmental</a></li>
+          <li><a href="/marketplace?category=event-branding-activation">Event Branding & Activation</a></li>
+          <li><a href="/services">View All 11 Service Categories →</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Platform</h4>
+        <ul>
+          <li><a href="/work">Our Work</a></li>
+          <li><a href="/marketplace">Product Catalogue</a></li>
+          <li><a href="/marketplace/custom-brief">Custom Brief</a></li>
+          <li><a href="/resources">Resources</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/about">About Us</a></li>
+          <li><a href="/contact">Contact Us</a></li>
+          <li><a href="/register">Create an Account</a></li>
+          <li><a href="/login">Log In</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>© <%= new Date().getFullYear() %> TrioCraft Brands Ltd. All rights reserved.</span>
+      <span><a href="/privacy" style="color:inherit">Privacy</a> · <a href="/terms" style="color:inherit">Terms</a> · Nairobi, Kenya</span>
+    </div>
+  </div>
+</footer>
