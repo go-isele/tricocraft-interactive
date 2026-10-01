@@ -5,13 +5,41 @@ import SiteFooter from "@/components/SiteFooter";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { INTERNAL_API_URL } from "@/lib/api";
 
+// favicon.ico, icon.png, apple-icon.png, opengraph-image.png, twitter-image.png,
+// and manifest.json all live in this folder as Next.js file conventions —
+// Next wires them into <head> automatically (favicon/icon/apple-icon links,
+// og:image/twitter:image tags, manifest link). metadataBase is required for
+// those relative image paths to resolve to absolute URLs in the actual
+// og:image/twitter:image meta tags that get shared.
+const SITE_NAME = "TrioCraft Brands Ltd";
+const SITE_DESCRIPTION =
+  "TrioCraft Brands Ltd — transforming physical spaces into immersive brand experiences. Nairobi-based branding, printing, design, and marketing solutions.";
+
 export const metadata = {
-  title: "TrioCraft Brands Ltd",
-  description:
-    "TrioCraft Brands Ltd — transforming physical spaces into immersive brand experiences. Nairobi-based branding, printing, design, and marketing solutions.",
-  icons: {
-    icon: "/img/triocraft-icon.svg",
+  metadataBase: new URL("https://triocraft.org"),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
+  description: SITE_DESCRIPTION,
+  applicationName: "TrioCraft",
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "https://triocraft.org",
+    locale: "en_KE",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+};
+
+export const viewport = {
+  themeColor: "#002B49",
 };
 
 async function getSiteConfig() {

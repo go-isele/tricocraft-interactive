@@ -1,0 +1,27 @@
+{
+  "name": "TrioCraft Brands Ltd",
+  "short_name": "TrioCraft",
+  "description": "TrioCraft Brands Ltd — transforming physical spaces into immersive brand experiences. Nairobi-based branding, printing, design, and marketing solutions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#002B49",
+  "theme_color": "#002B49",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
